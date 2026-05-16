@@ -1,0 +1,347 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Noto+Serif+TC:wght@300;400;500&family=Inter:wght@300;400;500&display=swap');
+
+/* ============================================================
+   CSS CUSTOM PROPERTIES (Design Tokens)
+   ============================================================ */
+:root {
+  /* Colors — elegant warm neutrals */
+  --color-bg:          #f8f5f1;
+  --color-surface:     #ffffff;
+  --color-border:      #e5ddd4;
+
+  --color-ink:         #2a1f14;
+  --color-ink-soft:    #5c4e3a;
+  --color-ink-muted:   #9b8e7e;
+
+  --color-gold:        #b89c6e;
+  --color-gold-light:  #d4be96;
+  --color-gold-dark:   #8a7350;
+
+  --color-cream:       #f2ece3;
+  --color-dark-overlay: rgba(20,14,8,0.52);
+
+  /* Typography */
+  --font-serif:   'Cormorant Garamond', 'Noto Serif TC', Georgia, serif;
+  --font-sans:    'Inter', 'Noto Serif TC', system-ui, sans-serif;
+  --font-zh:      'Noto Serif TC', 'Cormorant Garamond', serif;
+
+  /* Spacing */
+  --section-pad-v: clamp(4rem, 8vw, 7rem);
+
+  /* Transitions */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Shadows */
+  --shadow-sm:  0 2px 8px rgba(40,25,10,0.08);
+  --shadow-md:  0 6px 24px rgba(40,25,10,0.12);
+  --shadow-lg:  0 16px 48px rgba(40,25,10,0.16);
+}
+
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  line-height: 1.7;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, video {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul { list-style: none; }
+
+/* ============================================================
+   LAYOUT UTILITIES
+   ============================================================ */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 2rem);
+}
+
+.imgCenter {
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* ============================================================
+   TYPOGRAPHY UTILITIES
+   ============================================================ */
+.serif { font-family: var(--font-serif); }
+.zh    { font-family: var(--font-zh); }
+
+.section-label {
+  font-family: var(--font-serif);
+  font-size: clamp(0.7rem, 1.2vw, 0.85rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  display: block;
+  margin-bottom: 0.6rem;
+}
+
+.section-title {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4.5vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--color-ink);
+  margin-bottom: 0.5rem;
+}
+
+.section-title-zh {
+  font-family: var(--font-zh);
+  font-size: clamp(1rem, 2vw, 1.1rem);
+  font-weight: 300;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.12em;
+  margin-bottom: 2rem;
+}
+
+/* Gold divider line */
+.gold-line {
+  display: block;
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light));
+  margin: 1.2rem 0 2rem;
+}
+.gold-line.center { margin-left: auto; margin-right: auto; }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.8rem 2.2rem;
+  background: transparent;
+  border: 1px solid var(--color-gold);
+  color: var(--color-gold);
+  font-family: var(--font-serif);
+  font-size: 0.9rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.3s var(--ease-smooth), color 0.3s var(--ease-smooth);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s var(--ease-smooth);
+  z-index: 0;
+}
+
+.btn:hover::before { transform: scaleX(1); }
+.btn:hover { color: var(--color-surface); }
+.btn > * { position: relative; z-index: 1; }
+.btn span { position: relative; z-index: 1; }
+
+.btn-solid {
+  background: var(--color-gold);
+  color: var(--color-surface);
+}
+.btn-solid::before { background: var(--color-gold-dark); }
+.btn-solid:hover { color: var(--color-surface); }
+
+/* ============================================================
+   PARALLAX SECTION
+   ============================================================ */
+.parallax-section {
+  position: relative;
+  min-height: 340px;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .parallax-section {
+    background-attachment: scroll;
+  }
+}
+
+/* ============================================================
+   FLOATING SIDE BOX (desktop)
+   ============================================================ */
+.sideBox {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.sideBox-title {
+  writing-mode: vertical-rl;
+  font-family: var(--font-zh);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: var(--color-surface);
+  background: var(--color-gold);
+  padding: 1.2rem 0.7rem;
+  white-space: nowrap;
+}
+
+.sideBox-btn {
+  display: block;
+  width: 52px;
+  background: var(--color-ink);
+  color: var(--color-surface);
+  font-family: var(--font-serif);
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 0.8rem 0.3rem;
+  transition: background 0.3s;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sideBox-btn:hover { background: var(--color-gold); }
+
+.sideBox-icons {
+  display: flex;
+  flex-direction: column;
+  width: 52px;
+}
+
+.sideBox-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  color: var(--color-surface);
+  font-size: 1.3rem;
+  transition: opacity 0.2s;
+}
+
+.sideBox-icon:hover { opacity: 0.8; }
+.sideBox-icon.fb   { background: #1877f2; }
+.sideBox-icon.line { background: #00c300; }
+.sideBox-icon.tel  { background: var(--color-gold-dark); }
+
+@media (max-width: 768px) {
+  .sideBox { display: none; }
+}
+
+/* ============================================================
+   MOBILE BOTTOM BAR
+   ============================================================ */
+.botBar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  z-index: 300;
+  height: 54px;
+}
+
+.botBar-inner {
+  display: flex;
+  height: 100%;
+}
+
+.botBar-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #fff;
+  transition: opacity 0.2s;
+}
+
+.botBar-btn:hover { opacity: 0.85; }
+.botBar-btn.fb   { background: #1877f2; }
+.botBar-btn.line { background: #00c300; }
+.botBar-btn.tel  { background: var(--color-gold-dark); }
+.botBar-btn.reserve { background: var(--color-ink); font-size: 0.7rem; letter-spacing: 0.1em; font-family: var(--font-serif); }
+
+@media (max-width: 900px) {
+  .botBar { display: block; }
+  body { padding-bottom: 54px; }
+}
+
+/* ============================================================
+   GO TO TOP BUTTON
+   ============================================================ */
+.goTopBtn {
+  position: fixed;
+  right: 1.5rem;
+  bottom: -80px;
+  width: 44px;
+  height: 44px;
+  background: var(--color-gold);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  z-index: 250;
+  transition: bottom 0.4s var(--ease-smooth), background 0.2s;
+  border: none;
+  outline: none;
+}
+
+.goTopBtn.visible { bottom: calc(1.5rem + 54px); }
+@media (min-width: 901px) { .goTopBtn.visible { bottom: 1.5rem; } }
+.goTopBtn:hover { background: var(--color-gold-dark); }
+
+/* ============================================================
+   SCROLL ANIMATION UTILITY
+   ============================================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s var(--ease-smooth), transform 0.7s var(--ease-smooth);
+}
+
+.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }

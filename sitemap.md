@@ -91,12 +91,6 @@ Contains two sections:
 |-------|-----|------|
 | FACEBOOK | `facebook.com/86.88bnb/` | Social |
 | LINE | LINE `@gps2290j` | Social |
-| 台灣民宿旅遊網 | `twminsu.tw` | Listing / SEO |
-| 好康網 | `tw-bnb.com` | Listing / SEO |
-| 宜蘭民宿 | `yltravel.com.tw` | Listing / SEO |
-| 花蓮民宿 | `hutravel.com.tw` | Listing / SEO |
-| 台南民宿 | `tntravel.com.tw` | Listing / SEO |
-| 台東民宿 | `tatravel.com.tw` | Listing / SEO |
 
 ---
 
