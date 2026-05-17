@@ -49,7 +49,7 @@ export default function Header() {
         <ul className={styles.navList}>
           {nav.links.map((link) => (
             <li key={link.href}>
-              {link.external ? (
+              {'external' in link && link.external ? (
                 <a
                   href={link.href}
                   target="_blank"
@@ -111,7 +111,7 @@ export default function Header() {
         <ul className={styles.drawerList}>
           {nav.links.map((link) => (
             <li key={link.href}>
-              {link.external ? (
+              {'external' in link && link.external ? (
                 <a
                   href={link.href}
                   target="_blank"
