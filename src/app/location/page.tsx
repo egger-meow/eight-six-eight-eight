@@ -1,47 +1,30 @@
 'use client';
 
-import { useEffect } from 'react';
 import { useLang } from '@/context/LanguageContext';
 import { locationPage } from '@/data/content';
+import ScrollReveal from '@/components/ScrollReveal';
 import styles from './page.module.css';
 
 export default function Location() {
   const { t } = useLang();
-
-  useEffect(() => {
-    const reveals = document.querySelectorAll('.reveal');
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in-view');
-            obs.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    reveals.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
 
   return (
     <div className={styles.subPage}>
       {/* SubPage Header */}
       <div className={styles.pageHeader}>
         <div className="container">
-          <div className="reveal">
+          <ScrollReveal>
             <span className="section-label" style={{ color: 'var(--color-gold)' }}>LOCATION</span>
             <h1 className={styles.title}>{t(locationPage.h1)}</h1>
             <span className="gold-line center" />
-          </div>
+          </ScrollReveal>
         </div>
       </div>
 
       <section className={styles.contentSection}>
         <div className="container">
           <div className={styles.locationGrid}>
-            <div className={`reveal ${styles.infoCol}`}>
+            <ScrollReveal className={styles.infoCol}>
               <h2 className={styles.sectionTitle}>86.88 B&B</h2>
               <div className={styles.contactInfo}>
                 <div className={styles.infoRow}>
@@ -65,9 +48,9 @@ export default function Location() {
                   建議開車前往，民宿備有停車位供旅客使用。
                 </p>
               </div>
-            </div>
+            </ScrollReveal>
             
-            <div className={`reveal ${styles.mapCol}`}>
+            <ScrollReveal className={styles.mapCol}>
               <div className={styles.mapFrame}>
                 <iframe 
                   src={locationPage.mapEmbedSrc} 
@@ -80,7 +63,7 @@ export default function Location() {
                   title="Google Map"
                 ></iframe>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>

@@ -1,44 +1,27 @@
 'use client';
 
-import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLang } from '@/context/LanguageContext';
 import { roomsPage } from '@/data/content';
 import roomsData from '@/data/rooms.json';
+import ScrollReveal from '@/components/ScrollReveal';
 import styles from './page.module.css';
 
 export default function Rooms() {
   const { t } = useLang();
-
-  useEffect(() => {
-    const reveals = document.querySelectorAll('.reveal');
-    const obs = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in-view');
-            obs.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    reveals.forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, []);
 
   return (
     <div className={styles.subPage}>
       {/* SubPage Header */}
       <div className={styles.pageHeader}>
         <div className="container">
-          <div className="reveal">
+          <ScrollReveal>
             <span className="section-label" style={{ color: 'var(--color-gold)' }}>OUR ROOMS</span>
             <h1 className={styles.title}>{t(roomsPage.h1)}</h1>
             <span className="gold-line center" />
             <p className={styles.subtitle}>{t(roomsPage.subtitle)}</p>
-          </div>
+          </ScrollReveal>
         </div>
       </div>
 
@@ -46,10 +29,10 @@ export default function Rooms() {
         <div className="container">
           <div className={styles.roomGrid}>
             {roomsData.map((room, idx) => (
-              <div 
+              <ScrollReveal 
                 key={room.id} 
-                className={`reveal ${styles.roomCard}`}
-                style={{ transitionDelay: `${idx * 0.1}s` }}
+                className={styles.roomCard}
+                delay={`${idx * 0.1}s`}
               >
                 <Link href={`/rooms/${room.slug}`} className={styles.imgLink}>
                   <div className={styles.roomImgWrap}>
@@ -97,7 +80,7 @@ export default function Rooms() {
                     </a>
                   </div>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
