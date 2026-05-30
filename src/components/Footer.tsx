@@ -39,19 +39,7 @@ export default function Footer() {
         <div className="container">
           <p>
             COPYRIGHT &copy; {new Date().getFullYear()}&nbsp;
-            {footer.links.map((link, i) => (
-              <span key={link.href}>
-                <a
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.copyrightLink}
-                >
-                  {t(link.label)}
-                </a>
-                {i < footer.links.length - 1 && <span style={{ opacity: 0.3 }}> · </span>}
-              </span>
-            ))}
+
           </p>
           <p style={{ marginTop: '0.4rem', opacity: 0.45 }}>
             86.88 B&amp;B · {t(footer.address)} · {t(footer.copyright)} · #{footer.licenseNum}

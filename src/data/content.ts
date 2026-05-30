@@ -210,12 +210,7 @@ export const footer = {
     zh: '版權所有',
     en: 'All Rights Reserved',
   },
-  links: [
-    { href: 'https://twminsu.tw/',     label: { zh: '台灣民宿旅遊網', en: 'TW B&B Travel' } },
-    { href: 'https://yltravel.com.tw/', label: { zh: '宜蘭民宿',      en: 'Yilan B&B'     } },
-    { href: 'https://hutravel.com.tw/', label: { zh: '花蓮民宿',      en: 'Hualien B&B'   } },
-    { href: 'https://tntravel.com.tw/', label: { zh: '台南民宿',      en: 'Tainan B&B'    } },
-  ],
+
   address:    { zh: '宜蘭縣三星鄉拱照十二路86號', en: 'No.86, Gongzhao 12th Rd, Sanxing, Yilan' },
   licenseNum: '1767',
 } as const;
