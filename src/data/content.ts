@@ -31,7 +31,7 @@ export const nav = {
 ──────────────────────────────────────────────── */
 export const sideBox = {
   title:   { zh: '歡迎蒞臨入住', en: 'Welcome' },
-  reserve: { zh: 'RESERVE',     en: 'RESERVE'  },
+  reserve: { zh: '訂房',        en: 'RESERVE'  },
   mail:    { zh: 'MAIL 洽詢',   en: 'MAIL'     },
 } as const;
 
@@ -40,7 +40,7 @@ export const sideBox = {
 ──────────────────────────────────────────────── */
 export const hero = {
   location: { zh: '宜蘭．三星', en: 'Yilan · Sanxing' },
-  lines:    ['8688', 'CATS', 'BNB'],          // always stylized in EN
+  lines:    ['86.88', 'BNB'],                 // always stylized in EN
   subtitle: {
     zh: '歐風質感精緻渡假｜貓咪陪伴 療癒人心',
     en: 'European-style Boutique B&B · Healing Cat Companions',
@@ -224,7 +224,7 @@ export const footer = {
    MOBILE BOT BAR
 ──────────────────────────────────────────────── */
 export const botBar = {
-  reserve: { zh: 'RESERVE', en: 'RESERVE' },
+  reserve: { zh: '訂房', en: 'RESERVE' },
 } as const;
 
 /* ────────────────────────────────────────────────
