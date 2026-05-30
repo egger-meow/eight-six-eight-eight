@@ -31,7 +31,13 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env
+.env.local
+.env.*.local
+
+# Docker volumes (if using bind mounts instead of named volumes)
+npm_data/
+npm_letsencrypt/
 
 # vercel
 .vercel

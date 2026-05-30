@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build output (rebuilt inside container)
+.next
+out
+
+# Version control
+.git
+.gitignore
+
+# Docker (avoid recursive context)
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Documentation & non-build files
+*.md
+LICENSE
+
+# IDE & editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files (secrets — never bake into image)
+.env
+.env.*
+!.env.example
+
+# Synology NAS artifacts
+@eaDir
+
+# Test & coverage
+coverage
+.nyc_output
+
+# Gemini / AI tooling
+.gemini
