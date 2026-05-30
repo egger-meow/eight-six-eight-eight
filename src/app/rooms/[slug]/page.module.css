@@ -44,12 +44,12 @@
 @media (max-width: 900px) {
   .gallery {
     grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: auto;
-    aspect-ratio: 1;
+    grid-auto-rows: 180px;
+    aspect-ratio: unset;
   }
   .imgMain {
     grid-column: span 2;
-    aspect-ratio: 3/2;
+    grid-row: span 2;
   }
 }
 

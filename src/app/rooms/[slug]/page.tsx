@@ -58,6 +58,7 @@ export default function RoomDetail({ params }: { params: Promise<{ slug: string 
                   src={img} 
                   alt={`${room.name_zh} ${i}`} 
                   fill 
+                  sizes={i === 0 ? "(max-width: 768px) 100vw, 800px" : "(max-width: 768px) 50vw, 400px"}
                   style={{ objectFit: 'cover' }}
                   priority={i === 0}
                 />

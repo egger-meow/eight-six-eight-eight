@@ -61,6 +61,7 @@ export default function About() {
                   src="/images/index-page/abt3_bg.png" 
                   alt="86.88民宿" 
                   fill 
+                  sizes="(max-width: 768px) 100vw, 600px"
                   style={{ objectFit: 'cover' }} 
                 />
               </div>

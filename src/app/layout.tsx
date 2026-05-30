@@ -51,6 +51,7 @@ export default function RootLayout({
     <html
       lang="zh-TW"
       className={`${cormorant.variable} ${notoSerifTC.variable} ${inter.variable}`}
+      data-scroll-behavior="smooth"
     >
       <head>
         <link
