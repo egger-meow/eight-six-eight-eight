@@ -325,7 +325,7 @@ erDiagram
 | Step | 動作 | 備註 |
 |------|------|------|
 | 1 | NAS 接 Router LAN（用有線） | 穩定 |
-| 2 | 進 Synology DSM：`http://NAS_IP:5000` | 初始設定 |
+| 2 | 進 Synology DSM：`http://NAS_IP:5000` | 初始設定 (環境紀錄：DS220+ / DSM 7.2.2) |
 | 3 | 建立 admin account、RAID1、Shared Folder | 基礎配置 |
 | 4 | 固定 NAS IP（例如 `192.168.1.100`） | 去 router 設 DHCP reservation |
 
@@ -499,13 +499,16 @@ Data:
 | 📞 聯絡 | LINE + 電話 + Email |
 | 🔒 部署 | Cloudflare Tunnel → NAS → Docker |
 
-### 未來擴充（Phase 2+）
+### 未來擴充（Phase 2+）：全方位訂房與內容管理
+
+在確保既有功能穩定運作、維持強健擴充性架構的前提下，我們將實作以下擴充：
 
 | 項目 | 說明 |
 |------|------|
-| 金流串接 | 綠界/LINE Pay |
-| 訂房 API | 後端訂房管理 |
-| Admin 後台 | 管理房態、訂單 |
-| LINE 通知 | 新訂單自動通知老闆 |
-| Google Calendar | 訂房自動同步 |
-| AI 客服 | LINE/Web 聊天機器人 |
+| **訂房 API 與 UI/UX** | 建立完整的線上訂房流程，提供流暢的預約體驗與後端 API 支援。 |
+| **圖片與儲存管理** | 優化首頁 Gallery 等各頁面的圖片顯示，並建立完善的圖片儲存與管理機制。 |
+| **Admin 後台 (CMS)** | 老闆可登入管理網站內容，例如隨時更新**公告欄**。 |
+| **訂單行事曆 (Calendar)** | 後台提供視覺化行事曆，讓老闆一目了然每間房的入住與預訂狀況。 |
+| **OTA 平台同步 (Webhooks)**| 建立 Webhook 接收 Agoda、Booking.com 等平台的通知，自動同步房態與訂單。 |
+| **金流串接** | 綠界/LINE Pay 線上支付。 |
+| **LINE/Email 通知** | 新訂單自動通知老闆與旅客。 |

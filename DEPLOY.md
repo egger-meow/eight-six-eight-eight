@@ -51,7 +51,7 @@ NAS 192.168.1.128 — Docker
 
 | 項目 / Item | 需求 / Requirement |
 |---|---|
-| Synology NAS | DSM 7.0+ |
+| Synology NAS | DS220+ (建議) / DSM 7.2.2+ |
 | Container Manager | 從套件中心安裝 / Install from Package Center |
 | SSH | DSM → 控制台 → 終端機 → 啟用 SSH / Enable SSH |
 | Git | 從套件中心安裝 Git Server / Install from Package Center |
@@ -312,13 +312,13 @@ deploy:
 
 ## <a id="future"></a>10. 未來擴充 / Future Expansion
 
-Phase 2 可以在 `docker-compose.yml` 中新增更多服務：
+Phase 2 可以在 `docker-compose.yml` 中新增更多服務，以支援更強大的訂房系統與後台管理：
 
 ```yaml
 services:
   # ... 現有服務 ...
 
-  # PostgreSQL 資料庫
+  # PostgreSQL 資料庫 (儲存訂房紀錄、房態、公告欄內容)
   postgres:
     image: postgres:16-alpine
     container_name: 8688bnb-db
@@ -332,7 +332,7 @@ services:
     networks:
       - 8688bnb_net
 
-  # Redis 快取
+  # Redis 快取 (用於 Webhook 或高頻查詢)
   redis:
     image: redis:7-alpine
     container_name: 8688bnb-redis
@@ -342,6 +342,16 @@ services:
 ```
 
 然後在 NPM 新增 Proxy Host 指向新服務即可。
+
+### 未來重點功能架構 (Phase 2+)
+
+1. **完整訂房系統 (API & UI/UX)**：優化網站前端預約體驗，搭配強健的後端 API 處理庫存扣留與訂單建立。
+2. **圖片顯示與儲存管理**：優化網站各頁面（如首頁 Gallery、房型照片）的圖片顯示，並為每頁建立更佳的圖檔儲存與管理機制。
+3. **Admin 後台管理**：
+   - **內容管理 (CMS)**：老闆可自行管理網站內容，例如首頁的**公告欄**。
+   - **訂房行事曆 (Calendar UI)**：視覺化呈現每間房的訂房狀況，方便快速查閱與排房。
+4. **OTA 平台串接 (Webhooks)**：建立 Webhook 機制，接收 Agoda、Booking.com 等外部平台的通知，自動同步房態與預訂狀態。
+5. **穩健升級策略**：在新增上述功能的同時，確保既有架構（Next.js + NPM + Cloudflare Tunnel）穩定運行，建立高擴充性的專案結構。
 
 ---
 

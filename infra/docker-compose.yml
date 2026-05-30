@@ -1,0 +1,155 @@
+# =============================================================================
+# 86.88 B&B — Docker Compose Configuration
+# =============================================================================
+#
+# Services:
+#   1. website          — Next.js standalone app (port 3000 internal)
+#   2. nginx-proxy-manager — Reverse proxy GUI (port 80/443/81)
+#   3. cloudflared      — Cloudflare Tunnel agent (outbound only)
+#   4. postgres         — Database for future Admin/API
+#   5. redis            — Cache for future Admin/API
+#
+# Usage:
+#   First time:   docker compose up -d --build
+#   Update site:  docker compose build website && docker compose up -d website
+#   View logs:    docker compose logs -f
+#   Stop all:     docker compose down
+#
+# =============================================================================
+
+services:
+
+  # ── Next.js Website ────────────────────────────────────────────────────────
+  website:
+    build:
+      context: ..
+      dockerfile: apps/website/Dockerfile
+    container_name: 8688bnb-website
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+    # Port 3000 is NOT exposed to the host — only accessible via Docker network
+    # NPM routes traffic to this container internally
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - 8688bnb_net
+
+  # ── PostgreSQL Database ────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: 8688bnb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: 8688bnb
+      POSTGRES_USER: 8688bnb_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - 8688bnb_net
+
+  # ── Redis Cache ────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: 8688bnb-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - 8688bnb_net
+
+  # ── Nginx Proxy Manager (Reverse Proxy GUI) ───────────────────────────────
+  # Admin GUI: http://192.168.1.128:81
+  # Default login: admin@example.com / changeme (CHANGE IMMEDIATELY)
+  #
+  # After first login, create a Proxy Host:
+  #   Domain: 8688bnb.com (or your domain)
+  #   Forward Hostname: website
+  #   Forward Port: 3000
+  #   Scheme: http
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:2
+    container_name: 8688bnb-npm
+    restart: unless-stopped
+    ports:
+      # These ports are exposed to the host (LAN accessible)
+      - "8080:80"     # HTTP  — Cloudflare Tunnel connects directly via Docker network, so this is just for LAN
+      - "4443:443"    # HTTPS — Changed from 443 to avoid conflict with Synology DSM
+      - "81:81"     # Admin GUI — LAN only, do NOT expose via tunnel
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    healthcheck:
+      test: ["CMD", "/usr/bin/check-health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    networks:
+      - 8688bnb_net
+
+  # ── Cloudflare Tunnel ──────────────────────────────────────────────────────
+  # Connects outbound to Cloudflare edge — no port forwarding needed.
+  # Configure in Cloudflare Zero Trust dashboard:
+  #   Public hostname: 8688bnb.com → http://8688bnb-npm:80
+  #
+  # The tunnel routes external traffic through Cloudflare to NPM,
+  # which then forwards to the website container.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: 8688bnb-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      nginx-proxy-manager:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    networks:
+      - 8688bnb_net
+
+# ── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  8688bnb_net:
+    name: 8688bnb_net
+    driver: bridge
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+# Named volumes persist data across container recreations
+volumes:
+  npm_data:
+    name: 8688bnb_npm_data
+  npm_letsencrypt:
+    name: 8688bnb_npm_letsencrypt
+  postgres_data:
+    name: 8688bnb_postgres_data
+  redis_data:
+    name: 8688bnb_redis_data
