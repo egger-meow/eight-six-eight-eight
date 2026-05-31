@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Noto_Serif_TC, Inter } from "next/font/google";
+import { Playfair_Display, Noto_Serif_TC, Quicksand } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -8,10 +8,10 @@ import GoTop from "@/components/GoTop";
 import MobileBotBar from "@/components/MobileBotBar";
 import { LanguageProvider } from "@/context/LanguageContext";
 
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
   display: "swap",
 });
@@ -19,14 +19,14 @@ const cormorant = Cormorant_Garamond({
 const notoSerifTC = Noto_Serif_TC({
   variable: "--font-noto-zh",
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["300", "400", "500", "700"],
   display: "swap",
 });
 
-const inter = Inter({
-  variable: "--font-inter",
+const quicksand = Quicksand({
+  variable: "--font-quicksand",
   subsets: ["latin"],
-  weight: ["300", "400", "500"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -50,7 +50,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-TW"
-      className={`${cormorant.variable} ${notoSerifTC.variable} ${inter.variable}`}
+      className={`${playfair.variable} ${notoSerifTC.variable} ${quicksand.variable}`}
       data-scroll-behavior="smooth"
     >
       <head>
