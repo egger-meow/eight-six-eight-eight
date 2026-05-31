@@ -1,0 +1,5 @@
+
+
+> @8688bnb/shared-ui@1.0.0 build
+> tsc --project tsconfig.json
+

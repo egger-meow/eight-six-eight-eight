@@ -1,7 +1,14 @@
 {
-  "name": "utils",
+  "name": "@8688bnb/utils",
   "version": "1.0.0",
   "private": true,
-  "main": "index.js",
-  "dependencies": {}
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
 }

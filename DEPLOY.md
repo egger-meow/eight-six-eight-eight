@@ -45,6 +45,9 @@ NAS 192.168.1.128 — Docker
 - NAS **不需要** Port Forward / No port forwarding needed
 - SSL 由 Cloudflare 處理 / SSL handled by Cloudflare
 
+**進階架構 (Phase 2):**
+未來將會擴充 `admin` 後台和 `api` 服務，流量一樣會由 Cloudflare Tunnel 進入 NPM，再由 NPM 根據網域（如 `admin.8688bnb.com` 或 `api.8688bnb.com`）轉發給對應的容器。
+
 ---
 
 ## <a id="prerequisites"></a>2. 前置需求 / Prerequisites
@@ -62,17 +65,23 @@ NAS 192.168.1.128 — Docker
 
 ## <a id="directory-structure"></a>3. NAS 目錄結構 / Directory Structure
 
+本專案採用 Turborepo Monorepo 架構：
+
 ```
-/volume1/docker/8688bnb/           ← 專案根目錄 / Project root
-├── docker-compose.yml             ← Docker 編排檔
-├── Dockerfile                     ← Next.js 建構檔
-├── .env                           ← 環境變數（機密）
-├── .env.example                   ← 環境變數範本
-├── src/                           ← Next.js 原始碼
-├── public/                        ← 靜態資源（圖片等）
+/volume1/docker/8688bnb/eight-six-eight-eight/  ← 專案根目錄 (Git Root)
+├── apps/
+│   ├── website/                  ← Next.js 公開網站
+│   ├── admin/                    ← Next.js 後台 (Phase 2)
+│   └── api/                      ← NestJS (Phase 2)
+├── packages/                     ← 共用套件 (UI, DB, Configs)
+├── infra/                        ← ★ Docker 部署配置放置區
+│   └── docker-compose.yml        ← 主要 Docker 編排檔
+├── turbo.json
 ├── package.json
-└── ...
+└── .env                          ← 環境變數（機密，不會進入 Git）
 ```
+
+所有 `docker compose` 指令都必須在 `infra/` 目錄下執行。
 
 ---
 
@@ -92,7 +101,8 @@ sudo mkdir -p /volume1/docker/8688bnb
 cd /volume1/docker/8688bnb
 
 # Clone 程式碼（替換成你的 repo URL）
-git clone <your-repo-url> .
+git clone <your-repo-url> eight-six-eight-eight
+cd eight-six-eight-eight
 ```
 
 ### Step 3: 建立 .env 檔案
@@ -105,16 +115,19 @@ cp .env.example .env
 vi .env
 ```
 
-填入你的 Cloudflare Tunnel Token：
+請確保 `.env` 中填入你的 Cloudflare Tunnel Token，以及必要的資料庫密碼：
 ```
-TUNNEL_TOKEN=eyJhIjoiZWUwNjRh...（你的完整 token）
-NODE_ENV=production
+TUNNEL_TOKEN=eyJhIjoi...（你的完整 token）
+POSTGRES_PASSWORD=yenfeng
 ```
 
 ### Step 4: 建構並啟動所有服務
 
 ```bash
-# 建構 Next.js 映像檔並啟動所有容器
+# 進入 infra 資料夾
+cd infra/
+
+# 建構映像檔並啟動所有容器 (包含 website, postgres, redis, npm, cloudflared)
 docker compose up -d --build
 
 # 查看啟動狀態
@@ -130,8 +143,10 @@ docker compose logs -f
 # 所有容器應該顯示 "healthy" 或 "running"
 docker compose ps
 
-# 預期輸出：
+# 預期輸出範例：
 # 8688bnb-website    ... (healthy)
+# 8688bnb-postgres   ... (healthy)
+# 8688bnb-redis      ... (healthy)
 # 8688bnb-npm        ... (healthy)
 # 8688bnb-tunnel     ... (running)
 ```
@@ -168,11 +183,11 @@ docker compose ps
 
 ### 5.3 未來子網域（Phase 2+）
 
-| 網域 | 指向 | 用途 |
-|---|---|---|
-| `8688bnb.com` | `website:3000` | 民宿網站 |
-| `admin.8688bnb.com` | `admin:XXXX` | 後台管理 |
-| `api.8688bnb.com` | `api:XXXX` | API 服務 |
+| 網域 | Forward Hostname | Forward Port | 用途 |
+|---|---|---|---|
+| `8688bnb.com` | `website` | `3000` | 民宿網站 |
+| `admin.8688bnb.com` | `admin` | `3001` | 後台管理 |
+| `api.8688bnb.com` | `api` | `3333` | API 服務 |
 
 ---
 
@@ -208,12 +223,15 @@ docker compose ps
 ```bash
 # SSH 進入 NAS
 ssh your-username@192.168.1.128
-cd /volume1/docker/8688bnb
+cd /volume1/docker/8688bnb/eight-six-eight-eight
 
 # 拉取最新程式碼
 git pull
 
-# 重新建構並重啟 website 容器（不影響其他服務）
+# 切換到 infra/ 目錄
+cd infra/
+
+# 重新建構並重啟 website 容器（不影響 NPM/Tunnel/DB 等其他服務）
 docker compose build website
 docker compose up -d website
 
@@ -221,11 +239,13 @@ docker compose up -d website
 docker compose logs -f website
 ```
 
-> **提示**：只重建 `website` 容器，`cloudflared` 和 `nginx-proxy-manager` 不會被影響。
+> **提示**：由於使用了 `turbo prune`，Docker 建構速度將會非常快，只會重新安裝和編譯實際有更動的 Packages。
 
 ---
 
 ## <a id="commands"></a>8. 常用指令 / Useful Commands
+
+> **注意：所有 `docker compose` 指令都必須在 `infra/` 目錄下執行。**
 
 ```bash
 # ── 啟動 / Start ──
@@ -262,17 +282,15 @@ docker builder prune -f                 # 清理建構快取
 ### 網站打不開 / Website not loading
 
 ```bash
-# 1. 確認所有容器在跑
+# 1. 確認所有容器狀態 (進入 infra/ 執行)
+cd infra/
 docker compose ps
 
-# 2. 檢查 website 有沒有錯誤
+# 2. 檢查 website 是否有錯誤
 docker compose logs website
 
-# 3. 從 NAS 本機測試網站
-curl http://localhost:3000
-
-# 4. 測試 NPM 是否正常
-curl http://localhost:80
+# 3. 測試 NPM 是否正常
+curl http://localhost:8080
 ```
 
 ### Tunnel 連不上 / Tunnel not connecting
@@ -282,7 +300,7 @@ curl http://localhost:80
 docker compose logs cloudflared
 
 # 常見問題：
-# - "Invalid tunnel token" → 確認 .env 裡的 TUNNEL_TOKEN 正確
+# - "Invalid tunnel token" → 確認 root 目錄下 .env 裡的 TUNNEL_TOKEN 正確
 # - "Connection refused" → 確認 NPM 容器是否健康
 # - "DNS resolution failed" → 確認 Docker 網路正常
 ```
@@ -299,7 +317,7 @@ curl http://localhost:81
 
 ### 記憶體不足 / Out of memory
 
-如果 NAS 記憶體有限，可以調低 docker-compose.yml 中的 resource limits：
+如果 NAS 記憶體有限，可以調低 `infra/docker-compose.yml` 中的 resource limits：
 
 ```yaml
 deploy:
@@ -312,46 +330,21 @@ deploy:
 
 ## <a id="future"></a>10. 未來擴充 / Future Expansion
 
-Phase 2 可以在 `docker-compose.yml` 中新增更多服務，以支援更強大的訂房系統與後台管理：
+Phase 2 `admin` 後台和 `api` 服務已經預先定義在 `infra/docker-compose.yml` 中（目前被註解掉）。
 
-```yaml
-services:
-  # ... 現有服務 ...
-
-  # PostgreSQL 資料庫 (儲存訂房紀錄、房態、公告欄內容)
-  postgres:
-    image: postgres:16-alpine
-    container_name: 8688bnb-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: 8688bnb
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - 8688bnb_net
-
-  # Redis 快取 (用於 Webhook 或高頻查詢)
-  redis:
-    image: redis:7-alpine
-    container_name: 8688bnb-redis
-    restart: unless-stopped
-    networks:
-      - 8688bnb_net
-```
-
-然後在 NPM 新增 Proxy Host 指向新服務即可。
+當需要啟用時：
+1. 將 `infra/docker-compose.yml` 裡面 `admin` 和 `api` 服務的註解取消。
+2. 執行 `docker compose up -d --build`。
+3. 在 NPM 新增對應的 Proxy Host（指向 `admin` 和 `api` 容器）。
 
 ### 未來重點功能架構 (Phase 2+)
 
-1. **完整訂房系統 (API & UI/UX)**：優化網站前端預約體驗，搭配強健的後端 API 處理庫存扣留與訂單建立。
+1. **完整訂房系統 (API & UI/UX)**：優化網站前端預約體驗，搭配強健的後端 API (NestJS) 處理庫存扣留與訂單建立。
 2. **圖片顯示與儲存管理**：優化網站各頁面（如首頁 Gallery、房型照片）的圖片顯示，並為每頁建立更佳的圖檔儲存與管理機制。
 3. **Admin 後台管理**：
    - **內容管理 (CMS)**：老闆可自行管理網站內容，例如首頁的**公告欄**。
    - **訂房行事曆 (Calendar UI)**：視覺化呈現每間房的訂房狀況，方便快速查閱與排房。
 4. **OTA 平台串接 (Webhooks)**：建立 Webhook 機制，接收 Agoda、Booking.com 等外部平台的通知，自動同步房態與預訂狀態。
-5. **穩健升級策略**：在新增上述功能的同時，確保既有架構（Next.js + NPM + Cloudflare Tunnel）穩定運行，建立高擴充性的專案結構。
 
 ---
 
@@ -363,3 +356,4 @@ services:
 - ⚠️ 首次登入 NPM 後 **立即修改** 預設密碼
 - ✅ 所有對外流量都透過 Cloudflare Tunnel（加密 + DDoS 保護）
 - ✅ Website 容器以 non-root 使用者執行 (UID 1001)
+- ✅ 確保 `POSTGRES_PASSWORD` 使用強密碼

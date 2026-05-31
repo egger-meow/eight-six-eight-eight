@@ -1,5 +1,5 @@
 {
-  "name": "8688bnb-monorepo",
+  "name": "@8688bnb/monorepo",
   "private": true,
   "workspaces": [
     "apps/*",

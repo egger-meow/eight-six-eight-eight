@@ -1,0 +1,20 @@
+{
+  "name": "@8688bnb/shared-ui",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "eslint ."
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "react": "^19",
+    "react-dom": "^19",
+    "typescript": "^5"
+  }
+}
