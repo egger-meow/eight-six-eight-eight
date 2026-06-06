@@ -1,0 +1,3257 @@
+openapi: 3.1.0
+info:
+  title: 86.88 B&B — REST API
+  version: 1.0.0
+  description: |
+    Backend API for the 86.88 民宿 (B&B) platform.
+
+    Serves as the bridge between the PostgreSQL database and the frontend apps:
+    - `apps/website` — public-facing Next.js site (8688bnb.com)
+    - `apps/admin` — admin dashboard (admin.8688bnb.com)
+
+    ## Authentication
+    Admin authentication uses JWT tokens stored in `__Host-8688_session` HttpOnly cookies.
+    All state-changing requests require a CSRF token via the `X-CSRF-Token` header.
+
+    ## Rate Limiting
+    - Auth endpoints: 20 requests / 15 minutes
+    - General API: 200 requests / 15 minutes
+    - Public reads: 500 requests / 15 minutes
+    - Webhook ingress: 100 requests / 15 minutes
+
+    Rate limit info is returned in response headers:
+    - `X-RateLimit-Limit` — max requests in window
+    - `X-RateLimit-Remaining` — requests left
+    - `X-RateLimit-Reset` — window reset time (Unix epoch)
+
+  contact:
+    name: 8688 BnB Dev
+    email: dev@8688bnb.com
+  license:
+    name: Private
+    identifier: UNLICENSED
+
+servers:
+  - url: http://localhost:3333/api/v1
+    description: Local development
+  - url: https://api.8688bnb.com/api/v1
+    description: Production (via Cloudflare Tunnel)
+
+tags:
+  - name: Auth
+    description: Admin authentication & session management
+  - name: Rooms
+    description: Room listing & management
+  - name: Bookings
+    description: Reservation management & calendar views
+  - name: Blocked Dates
+    description: Room availability blocking (maintenance, owner travel, etc.)
+  - name: Media
+    description: Site-wide image & media management per page/section
+  - name: Pages
+    description: CMS content pages
+  - name: News
+    description: Announcements & news management (最新消息)
+  - name: Dashboard
+    description: Admin dashboard stats & overview
+  - name: Webhooks
+    description: Unified OTA channel manager webhook
+  - name: System
+    description: Health checks & system info
+
+# ─── Security Schemes ────────────────────────────────────────────────────────
+security: []
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __Host-8688_session
+      description: |
+        JWT stored in a hardened HttpOnly cookie.
+        Set automatically on successful login.
+        Cookie attributes: HttpOnly, Secure, SameSite=Strict, Path=/
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: |
+        CSRF token required for all state-changing requests (POST, PUT, DELETE).
+        Obtained from the login response or `GET /auth/csrf-token`.
+    webhookApiKey:
+      type: apiKey
+      in: header
+      name: X-Webhook-Key
+      description: |
+        API key for authenticating incoming OTA channel manager webhooks.
+        Configured in the WEBHOOK_API_KEY environment variable.
+
+  # ─── Reusable Schemas ────────────────────────────────────────────────────────
+  schemas:
+
+    # ── Core Entities ──────────────────────────────────────────────────────────
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: yenfeng
+        display_name:
+          type: string
+          example: 黃筵丰
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, username, display_name, created_at]
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        slug:
+          type: string
+          pattern: '^[a-z][a-z0-9-]*$'
+          example: r1
+          description: URL-safe identifier (r1, r2, etc.)
+        name_zh:
+          type: string
+          example: 浪漫情懷 景觀二人房
+        name_en:
+          type: string
+          example: Scenic Double Room
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 2
+        type:
+          type: string
+          enum: [double, quad, suite]
+          example: double
+        description:
+          type: string
+          example: 位於二樓的景觀房，可欣賞安農溪畔美景...
+        amenities:
+          type: array
+          items:
+            type: string
+          example: [冷暖氣, 獨立衛浴, 免治馬桶, Wi-Fi, 冰箱]
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaItem'
+          description: Room photo gallery
+        price_weekday:
+          type: number
+          format: decimal
+          example: 2600
+          description: Weekday price (TWD)
+        price_weekend:
+          type: number
+          format: decimal
+          example: 3200
+          description: Weekend price (TWD, Fri & Sat nights)
+        price_holiday:
+          type: number
+          format: decimal
+          example: 3600
+          description: Holiday/peak season price (TWD)
+        available:
+          type: boolean
+          example: true
+          description: Whether this room is active/bookable
+        sort_order:
+          type: integer
+          example: 1
+          description: Display order on the website
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - name_zh
+        - capacity
+        - type
+        - price_weekday
+        - price_weekend
+        - price_holiday
+        - available
+        - sort_order
+        - created_at
+        - updated_at
+
+    RoomCreateRequest:
+      type: object
+      properties:
+        slug:
+          type: string
+          pattern: '^[a-z][a-z0-9-]*$'
+          example: r6
+        name_zh:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: 新房型名稱
+        name_en:
+          type: string
+          maxLength: 100
+          example: New Room Name
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 2
+        type:
+          type: string
+          enum: [double, quad, suite]
+          example: double
+        description:
+          type: string
+          maxLength: 2000
+        amenities:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 30
+        price_weekday:
+          type: number
+          minimum: 0
+          example: 2600
+        price_weekend:
+          type: number
+          minimum: 0
+          example: 3200
+        price_holiday:
+          type: number
+          minimum: 0
+          example: 3600
+        available:
+          type: boolean
+          default: true
+        sort_order:
+          type: integer
+          minimum: 0
+          example: 6
+      required: [slug, name_zh, capacity, type, price_weekday, price_weekend, price_holiday]
+
+    RoomUpdateRequest:
+      type: object
+      properties:
+        name_zh:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name_en:
+          type: string
+          maxLength: 100
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 10
+        type:
+          type: string
+          enum: [double, quad, suite]
+        description:
+          type: string
+          maxLength: 2000
+        amenities:
+          type: array
+          items:
+            type: string
+            maxLength: 50
+          maxItems: 30
+        price_weekday:
+          type: number
+          minimum: 0
+        price_weekend:
+          type: number
+          minimum: 0
+        price_holiday:
+          type: number
+          minimum: 0
+        available:
+          type: boolean
+        sort_order:
+          type: integer
+          minimum: 0
+      minProperties: 1
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 101
+        room_id:
+          type: integer
+          example: 1
+        room:
+          $ref: '#/components/schemas/RoomSummary'
+        source:
+          type: string
+          enum: [website, phone, line, ota, walk_in, admin]
+          example: website
+          description: How this booking was created
+        ota_platform:
+          type: string
+          nullable: true
+          example: agoda
+          description: OTA platform name if source is "ota"
+        ota_booking_id:
+          type: string
+          nullable: true
+          example: AGD-123456
+          description: External booking ID from OTA platform
+        check_in:
+          type: string
+          format: date
+          example: '2026-07-15'
+        check_out:
+          type: string
+          format: date
+          example: '2026-07-17'
+        guest_name:
+          type: string
+          example: 陳小明
+        guest_phone:
+          type: string
+          example: '0912-345-678'
+        guest_email:
+          type: string
+          format: email
+          nullable: true
+          example: guest@example.com
+        guest_count:
+          type: integer
+          minimum: 1
+          example: 2
+        total_price:
+          type: number
+          format: decimal
+          nullable: true
+          example: 6400
+          description: Total price in TWD (calculated or manually set)
+        status:
+          type: string
+          enum: [pending, confirmed, checked_in, checked_out, cancelled, no_show]
+          example: confirmed
+        notes:
+          type: string
+          nullable: true
+          example: 旅客希望加枕頭
+          description: Internal notes visible only to admin
+        internal_notes:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingNote'
+          description: Timestamped internal note log
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - room_id
+        - source
+        - check_in
+        - check_out
+        - guest_name
+        - guest_count
+        - status
+        - created_at
+        - updated_at
+
+    BookingCreateRequest:
+      type: object
+      description: |
+        Used by the public booking form on the website.
+        Status defaults to "pending" — boss confirms via admin.
+      properties:
+        room_id:
+          type: integer
+          example: 1
+        check_in:
+          type: string
+          format: date
+          example: '2026-07-15'
+        check_out:
+          type: string
+          format: date
+          example: '2026-07-17'
+        guest_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: 陳小明
+        guest_phone:
+          type: string
+          minLength: 1
+          maxLength: 30
+          example: '0912-345-678'
+        guest_email:
+          type: string
+          format: email
+          maxLength: 255
+        guest_count:
+          type: integer
+          minimum: 1
+          maximum: 10
+          example: 2
+        notes:
+          type: string
+          maxLength: 1000
+          description: Guest message / special requests
+      required: [room_id, check_in, check_out, guest_name, guest_phone, guest_count]
+
+    BookingUpdateRequest:
+      type: object
+      properties:
+        room_id:
+          type: integer
+        check_in:
+          type: string
+          format: date
+        check_out:
+          type: string
+          format: date
+        guest_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        guest_phone:
+          type: string
+          maxLength: 30
+        guest_email:
+          type: string
+          format: email
+          maxLength: 255
+        guest_count:
+          type: integer
+          minimum: 1
+          maximum: 10
+        total_price:
+          type: number
+          minimum: 0
+        status:
+          type: string
+          enum: [pending, confirmed, checked_in, checked_out, cancelled, no_show]
+        notes:
+          type: string
+          maxLength: 1000
+        source:
+          type: string
+          enum: [website, phone, line, ota, walk_in, admin]
+        ota_platform:
+          type: string
+          maxLength: 50
+        ota_booking_id:
+          type: string
+          maxLength: 100
+      minProperties: 1
+
+    BookingNote:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        booking_id:
+          type: integer
+          example: 101
+        content:
+          type: string
+          example: 旅客來電確認入住時間為下午3點
+        created_at:
+          type: string
+          format: date-time
+      required: [id, booking_id, content, created_at]
+
+    RoomSummary:
+      type: object
+      description: Minimal room info embedded in booking responses
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        name_zh:
+          type: string
+        type:
+          type: string
+      required: [id, slug, name_zh, type]
+
+    CalendarEntry:
+      type: object
+      description: A single day's data for one room in the calendar view
+      properties:
+        date:
+          type: string
+          format: date
+          example: '2026-07-15'
+        room_id:
+          type: integer
+          example: 1
+        room_slug:
+          type: string
+          example: r1
+        room_name_zh:
+          type: string
+          example: 浪漫情懷 景觀二人房
+        status:
+          type: string
+          enum: [available, booked, blocked, checked_in]
+          example: booked
+          description: |
+            - available: room is free
+            - booked: confirmed booking exists
+            - blocked: admin blocked this date
+            - checked_in: guest currently staying
+        booking:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/CalendarBookingSummary'
+          description: Booking info if status is booked/checked_in
+        blocked_info:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/BlockedDateInfo'
+          description: Block info if status is blocked (with reason for hover tooltip)
+      required: [date, room_id, room_slug, room_name_zh, status]
+
+    CalendarBookingSummary:
+      type: object
+      description: Minimal booking info for calendar cells
+      properties:
+        id:
+          type: integer
+        guest_name:
+          type: string
+        guest_count:
+          type: integer
+        check_in:
+          type: string
+          format: date
+        check_out:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending, confirmed, checked_in, checked_out, cancelled, no_show]
+        source:
+          type: string
+      required: [id, guest_name, guest_count, check_in, check_out, status, source]
+
+    BlockedDateInfo:
+      type: object
+      description: Info about a blocked date (shown on hover tooltip)
+      properties:
+        reason:
+          type: string
+          example: 老闆出國旅遊
+          description: Human-readable reason for blocking (displayed on hover)
+        blocked_by:
+          type: string
+          example: yenfeng
+      required: [reason]
+
+    # ── Blocked Dates ──────────────────────────────────────────────────────────
+
+    BlockedDate:
+      type: object
+      description: |
+        A date range where a room is unavailable (not a booking).
+        Boss can block dates when going abroad, maintenance, etc.
+        The reason is displayed as a tooltip when users hover over blocked dates.
+      properties:
+        id:
+          type: integer
+          example: 1
+        room_id:
+          type: integer
+          nullable: true
+          example: null
+          description: Specific room, or null = all rooms blocked
+        start_date:
+          type: string
+          format: date
+          example: '2026-08-01'
+        end_date:
+          type: string
+          format: date
+          example: '2026-08-07'
+        reason:
+          type: string
+          example: 老闆出國旅遊
+          description: Comment/reason shown when hovering on these dates
+        created_by:
+          type: string
+          example: yenfeng
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, start_date, end_date, reason, created_by, created_at, updated_at]
+
+    BlockedDateCreateRequest:
+      type: object
+      properties:
+        room_id:
+          type: integer
+          nullable: true
+          description: Specific room ID, or omit/null to block ALL rooms
+        start_date:
+          type: string
+          format: date
+          example: '2026-08-01'
+        end_date:
+          type: string
+          format: date
+          example: '2026-08-07'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: 老闆出國旅遊
+          description: Reason displayed on hover (required so guests understand why)
+      required: [start_date, end_date, reason]
+
+    BlockedDateUpdateRequest:
+      type: object
+      properties:
+        room_id:
+          type: integer
+          nullable: true
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 200
+      minProperties: 1
+
+    # ── Media (Page-level image management) ────────────────────────────────────
+
+    MediaItem:
+      type: object
+      description: |
+        A single image/media file.
+        Media is organized by "target" — which page/section it belongs to.
+        Target examples: homepage_hero, homepage_cats, homepage_bnb,
+        about, rooms_overview, room_r1, room_r2, ..., location, gallery, etc.
+      properties:
+        id:
+          type: integer
+          example: 1
+        target:
+          type: string
+          example: homepage_hero
+          description: |
+            Which page/section this media belongs to.
+            Convention follows the site structure:
+            - homepage_hero — Hero carousel images
+            - homepage_8688 — 8688 section images
+            - homepage_cats — Cats section images
+            - homepage_bnb — BnB section images
+            - about — About Us page
+            - rooms_overview — Rooms overview (stay) page thumbnails
+            - room_{slug} — Per-room gallery (e.g. room_r1, room_r2)
+            - booking_info — Booking info / regulation page
+            - location — Location page
+            - gallery — General photo gallery
+            - brand — Logo and brand assets
+        filename_original:
+          type: string
+          example: room1-view.jpg
+          description: Original uploaded filename (stored in DB only, not used for storage)
+        filename_stored:
+          type: string
+          example: a3f8c2e1-4d5b-6789-0abc-def012345678.webp
+          description: UUID-based filename on disk
+        url:
+          type: string
+          format: uri
+          example: /uploads/images/a3f8c2e1-4d5b-6789-0abc-def012345678.webp
+          description: Public URL path to serve the image
+        mime_type:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+          example: image/webp
+        size_bytes:
+          type: integer
+          example: 245760
+        width:
+          type: integer
+          nullable: true
+          example: 1920
+        height:
+          type: integer
+          nullable: true
+          example: 1080
+        alt_text:
+          type: string
+          nullable: true
+          example: 浪漫情懷房間景觀
+          description: Alt text for accessibility and SEO
+        sort_order:
+          type: integer
+          example: 1
+          description: Display order within the target group
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - target
+        - filename_original
+        - filename_stored
+        - url
+        - mime_type
+        - size_bytes
+        - sort_order
+        - created_at
+        - updated_at
+
+    MediaUploadResponse:
+      type: object
+      properties:
+        media:
+          $ref: '#/components/schemas/MediaItem'
+        message:
+          type: string
+          example: 圖片上傳成功
+      required: [media, message]
+
+    MediaReorderRequest:
+      type: object
+      properties:
+        image_ids:
+          type: array
+          items:
+            type: integer
+          description: Ordered list of media item IDs (new display order)
+          minItems: 1
+          maxItems: 50
+      required: [image_ids]
+
+    # ── Pages CMS ──────────────────────────────────────────────────────────────
+
+    Page:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        slug:
+          type: string
+          example: about
+          description: URL path segment
+        title_zh:
+          type: string
+          example: 關於我們
+        title_en:
+          type: string
+          nullable: true
+          example: About Us
+        content_html:
+          type: string
+          description: Sanitized HTML content
+          example: <h2>86.88 民宿</h2><p>位於宜蘭三星...</p>
+        meta:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: SEO metadata, Open Graph tags, etc.
+          example:
+            seo_title: 關於我們 — 86.88 民宿
+            seo_description: 宜蘭三星歐風民宿，貓咪陪伴療癒人心
+        published:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, slug, title_zh, published, created_at, updated_at]
+
+    PageUpdateRequest:
+      type: object
+      properties:
+        title_zh:
+          type: string
+          minLength: 1
+          maxLength: 200
+        title_en:
+          type: string
+          maxLength: 200
+        content_html:
+          type: string
+          maxLength: 50000
+          description: HTML content — will be sanitized server-side (DOMPurify)
+        meta:
+          type: object
+          additionalProperties: true
+        published:
+          type: boolean
+      minProperties: 1
+
+    # ── News / Announcements (最新消息) ────────────────────────────────────────
+
+    NewsItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: 中秋連假加開房間
+        content:
+          type: string
+          example: 中秋連假期間(9/15-9/17)加開一間房...
+        published_at:
+          type: string
+          format: date
+          nullable: true
+          example: '2026-09-01'
+        visible:
+          type: boolean
+          example: true
+        pinned:
+          type: boolean
+          example: false
+          description: Pinned news items always show at the top
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, title, content, visible, pinned, created_at, updated_at]
+
+    NewsCreateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: 中秋連假加開房間
+        content:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        published_at:
+          type: string
+          format: date
+          description: Schedule future publish date, or omit for immediate
+        visible:
+          type: boolean
+          default: true
+        pinned:
+          type: boolean
+          default: false
+      required: [title, content]
+
+    NewsUpdateRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        content:
+          type: string
+          maxLength: 5000
+        published_at:
+          type: string
+          format: date
+          nullable: true
+        visible:
+          type: boolean
+        pinned:
+          type: boolean
+      minProperties: 1
+
+    # ── OTA Webhooks (Unified Channel Manager) ─────────────────────────────────
+
+    WebhookEvent:
+      type: object
+      description: |
+        Logged event from an incoming OTA channel manager webhook.
+        A single unified endpoint receives events from any channel manager
+        (e.g. SiteMinder, Cloudbeds, or direct OTA integrations).
+      properties:
+        id:
+          type: integer
+          example: 1
+        event_type:
+          type: string
+          enum: [new_booking, modify_booking, cancel_booking, rate_update, inventory_update, unknown]
+          example: new_booking
+        platform:
+          type: string
+          example: agoda
+          description: Origin platform (extracted from payload or header)
+        external_booking_id:
+          type: string
+          nullable: true
+          example: AGD-123456
+        payload:
+          type: object
+          additionalProperties: true
+          description: Raw webhook payload stored for audit
+        status:
+          type: string
+          enum: [received, processed, failed, ignored]
+          example: received
+        error_message:
+          type: string
+          nullable: true
+          description: Error details if processing failed
+        processed_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, event_type, platform, payload, status, created_at]
+
+    WebhookIngestRequest:
+      type: object
+      description: |
+        Unified webhook payload from a channel manager.
+        The structure is flexible to accommodate different platforms.
+      properties:
+        event_type:
+          type: string
+          enum: [new_booking, modify_booking, cancel_booking, rate_update, inventory_update]
+          example: new_booking
+        platform:
+          type: string
+          maxLength: 50
+          example: agoda
+          description: Which OTA platform this event originated from
+        external_booking_id:
+          type: string
+          maxLength: 100
+          example: AGD-123456
+        data:
+          type: object
+          additionalProperties: true
+          description: |
+            Platform-specific booking/event data.
+            For new_booking: { guest_name, check_in, check_out, room_type, ... }
+            For cancel_booking: { reason, ... }
+            Stored as-is in the webhook log.
+      required: [event_type, platform]
+
+    # ── Dashboard ──────────────────────────────────────────────────────────────
+
+    DashboardStats:
+      type: object
+      properties:
+        today_check_ins:
+          type: integer
+          example: 2
+          description: Number of guests checking in today
+        today_check_outs:
+          type: integer
+          example: 1
+        current_occupancy:
+          type: integer
+          example: 3
+          description: Rooms currently occupied
+        total_rooms:
+          type: integer
+          example: 5
+        occupancy_rate:
+          type: number
+          format: float
+          example: 0.6
+          description: current_occupancy / total_rooms
+        upcoming_bookings_7d:
+          type: integer
+          example: 4
+          description: Confirmed bookings in the next 7 days
+        pending_bookings:
+          type: integer
+          example: 2
+          description: Bookings awaiting confirmation
+        monthly_revenue:
+          type: number
+          format: decimal
+          nullable: true
+          example: 48000
+          description: Total revenue this month (from confirmed/checked_out bookings)
+        unprocessed_webhooks:
+          type: integer
+          example: 0
+          description: Webhook events not yet processed
+      required:
+        - today_check_ins
+        - today_check_outs
+        - current_occupancy
+        - total_rooms
+        - occupancy_rate
+        - upcoming_bookings_7d
+        - pending_bookings
+        - unprocessed_webhooks
+
+    OccupancyEntry:
+      type: object
+      description: Daily occupancy data for a specific room
+      properties:
+        date:
+          type: string
+          format: date
+        room_id:
+          type: integer
+        room_slug:
+          type: string
+        is_occupied:
+          type: boolean
+        is_blocked:
+          type: boolean
+      required: [date, room_id, room_slug, is_occupied, is_blocked]
+
+    # ── Common / Pagination ────────────────────────────────────────────────────
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+        per_page:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+        total:
+          type: integer
+          example: 47
+        total_pages:
+          type: integer
+          example: 3
+      required: [page, per_page, total, total_pages]
+
+    ApiResponse:
+      type: object
+      description: Standard success response wrapper
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          description: Response payload (varies by endpoint)
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+      required: [success, data]
+
+    ApiError:
+      type: object
+      description: Standard error response
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+              description: |
+                Machine-readable error code. Examples:
+                - AUTH_INVALID_CREDENTIALS
+                - AUTH_SESSION_EXPIRED
+                - AUTH_CSRF_INVALID
+                - VALIDATION_ERROR
+                - NOT_FOUND
+                - RATE_LIMITED
+                - CONFLICT (e.g. double-booking)
+                - INTERNAL_ERROR
+                - UPLOAD_FILE_TOO_LARGE
+                - UPLOAD_INVALID_TYPE
+            message:
+              type: string
+              example: 驗證失敗
+              description: Human-readable error message (Chinese)
+            message_en:
+              type: string
+              example: Validation failed
+              description: English fallback message
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: check_in
+                  message:
+                    type: string
+                    example: 入住日期不得早於今天
+              description: Per-field validation errors (if applicable)
+          required: [code, message]
+      required: [success, error]
+
+    CsrfTokenResponse:
+      type: object
+      properties:
+        csrf_token:
+          type: string
+          example: abc123def456...
+      required: [csrf_token]
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, error]
+          example: ok
+        version:
+          type: string
+          example: 1.0.0
+        uptime_seconds:
+          type: integer
+          example: 86400
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [ok, error]
+            redis:
+              type: string
+              enum: [ok, error]
+      required: [status, version, uptime_seconds, checks]
+
+    SystemInfo:
+      type: object
+      properties:
+        version:
+          type: string
+          example: 1.0.0
+        node_version:
+          type: string
+          example: v20.11.1
+        uptime_seconds:
+          type: integer
+        database_status:
+          type: string
+          enum: [connected, disconnected]
+        redis_status:
+          type: string
+          enum: [connected, disconnected]
+        total_rooms:
+          type: integer
+        total_bookings:
+          type: integer
+        total_media_files:
+          type: integer
+        storage_used_mb:
+          type: number
+          format: float
+      required: [version, node_version, uptime_seconds, database_status, redis_status]
+
+  # ─── Reusable Parameters ──────────────────────────────────────────────────
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number for pagination
+
+    PerPageParam:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Items per page
+
+    RoomSlugParam:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-z][a-z0-9-]*$'
+      description: Room slug (e.g. r1, r2)
+
+    BookingIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Booking ID
+
+    NewsIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: News item ID
+
+    MediaIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Media item ID
+
+    BlockedDateIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Blocked date entry ID
+
+    DateFromParam:
+      name: from
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+      description: Start date (inclusive)
+
+    DateToParam:
+      name: to
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+      description: End date (inclusive)
+
+  # ─── Reusable Responses ──────────────────────────────────────────────────
+  responses:
+    Unauthorized:
+      description: Authentication required or session expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error:
+              code: AUTH_SESSION_EXPIRED
+              message: 登入已過期，請重新登入
+              message_en: Session expired, please log in again
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error:
+              code: FORBIDDEN
+              message: 權限不足
+              message_en: Insufficient permissions
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error:
+              code: NOT_FOUND
+              message: 找不到資源
+              message_en: Resource not found
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: 資料驗證失敗
+              message_en: Validation failed
+              details:
+                - field: check_in
+                  message: 入住日期不得早於今天
+
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error:
+              code: RATE_LIMITED
+              message: 請求太頻繁，請稍後再試
+              message_en: Too many requests, please try again later
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+
+    CsrfError:
+      description: CSRF token missing or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error:
+              code: AUTH_CSRF_INVALID
+              message: CSRF 驗證失敗
+              message_en: CSRF validation failed
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PATHS
+# ═════════════════════════════════════════════════════════════════════════════
+
+paths:
+
+  # ── Health Check ─────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [System]
+      operationId: healthCheck
+      summary: Health check
+      description: |
+        Returns service health status. Used by Docker healthcheck.
+        No authentication required.
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # AUTH
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Admin login
+      description: |
+        Authenticate the admin user (username: yenfeng).
+        On success, sets the `__Host-8688_session` HttpOnly cookie
+        and returns a CSRF token for subsequent state-changing requests.
+
+        Rate limited: 20 attempts / 15 minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: yenfeng
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  maxLength: 128
+                  example: '********'
+              required: [username, password]
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: '__Host-8688_session cookie (HttpOnly, Secure, SameSite=Strict)'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/AdminUser'
+                      csrf_token:
+                        type: string
+                        description: CSRF token — include in X-CSRF-Token header for state-changing requests
+                    required: [user, csrf_token]
+                required: [success, data]
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error:
+                  code: AUTH_INVALID_CREDENTIALS
+                  message: 帳號或密碼錯誤
+                  message_en: Invalid username or password
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Admin logout
+      description: |
+        Invalidate the current session.
+        Clears the `__Host-8688_session` cookie.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '200':
+          description: Logged out successfully
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: Clears __Host-8688_session cookie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 已成功登出
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: getMe
+      summary: Get current admin profile
+      description: Returns the authenticated admin user profile.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AdminUser'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/password:
+    put:
+      tags: [Auth]
+      operationId: changePassword
+      summary: Change admin password
+      description: |
+        Change the admin password. Requires current password for verification.
+        New password must meet strength requirements (min 8 chars).
+        All existing sessions are invalidated after password change.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                current_password:
+                  type: string
+                  format: password
+                  maxLength: 128
+                new_password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  maxLength: 128
+                  description: |
+                    Must be at least 8 characters.
+                    All character types allowed.
+              required: [current_password, new_password]
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 密碼已更新，請重新登入
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Current password incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error:
+                  code: AUTH_INVALID_CREDENTIALS
+                  message: 目前密碼不正確
+                  message_en: Current password is incorrect
+
+  /auth/csrf-token:
+    get:
+      tags: [Auth]
+      operationId: getCsrfToken
+      summary: Get CSRF token
+      description: |
+        Returns a fresh CSRF token. Useful for refreshing the token
+        without re-authenticating.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: CSRF token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/CsrfTokenResponse'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ROOMS
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /rooms:
+    get:
+      tags: [Rooms]
+      operationId: listRooms
+      summary: List all rooms
+      description: |
+        Public endpoint — returns all active rooms for the website.
+        Admin users see all rooms including unavailable ones.
+      parameters:
+        - name: include_unavailable
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include unavailable rooms (admin only)
+      responses:
+        '200':
+          description: Room list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Room'
+                required: [success, data]
+
+    post:
+      tags: [Rooms]
+      operationId: createRoom
+      summary: Create a new room
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomCreateRequest'
+      responses:
+        '201':
+          description: Room created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Room'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Room slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error:
+                  code: CONFLICT
+                  message: 此房型代碼已存在
+                  message_en: Room slug already exists
+
+  /rooms/{slug}:
+    parameters:
+      - $ref: '#/components/parameters/RoomSlugParam'
+
+    get:
+      tags: [Rooms]
+      operationId: getRoom
+      summary: Get room detail
+      description: Public endpoint — returns room details by slug.
+      responses:
+        '200':
+          description: Room detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Room'
+                required: [success, data]
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Rooms]
+      operationId: updateRoom
+      summary: Update room
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomUpdateRequest'
+      responses:
+        '200':
+          description: Room updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Room'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Rooms]
+      operationId: deleteRoom
+      summary: Soft-delete room
+      description: |
+        Marks the room as unavailable (soft delete).
+        Existing bookings are not affected.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '200':
+          description: Room soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 房型已停用
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /rooms/{slug}/availability:
+    parameters:
+      - $ref: '#/components/parameters/RoomSlugParam'
+    get:
+      tags: [Rooms]
+      operationId: checkRoomAvailability
+      summary: Check room availability
+      description: |
+        Public endpoint — checks if a room is available for a date range.
+        Returns availability status considering both bookings and blocked dates.
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Availability result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      available:
+                        type: boolean
+                        example: true
+                      room_slug:
+                        type: string
+                        example: r1
+                      from:
+                        type: string
+                        format: date
+                      to:
+                        type: string
+                        format: date
+                      conflicts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                              format: date
+                            reason:
+                              type: string
+                              enum: [booked, blocked]
+                            message:
+                              type: string
+                              description: If blocked, shows the reason/comment
+                        description: Dates that are unavailable (if any)
+                      estimated_price:
+                        type: number
+                        format: decimal
+                        description: Estimated total price for the date range (TWD)
+                    required: [available, room_slug, from, to]
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # BOOKINGS
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /bookings:
+    get:
+      tags: [Bookings]
+      operationId: listBookings
+      summary: List bookings (admin)
+      description: |
+        List all bookings with filtering and pagination.
+        Admin only.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, checked_in, checked_out, cancelled, no_show]
+          description: Filter by booking status
+        - name: room_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by room
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter check-in date from (inclusive)
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter check-in date to (inclusive)
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+          description: Search by guest name or phone
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [website, phone, line, ota, walk_in, admin]
+          description: Filter by booking source
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [check_in_asc, check_in_desc, created_at_asc, created_at_desc]
+            default: check_in_desc
+      responses:
+        '200':
+          description: Paginated booking list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+                required: [success, data, meta]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Bookings]
+      operationId: createBooking
+      summary: Create new booking
+      description: |
+        Public endpoint — used by the website booking form.
+        Booking status defaults to "pending".
+        Validates room availability (no double-booking or blocked dates).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreateRequest'
+      responses:
+        '201':
+          description: Booking created (pending confirmation)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Booking'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          description: Room not available for requested dates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error:
+                  code: CONFLICT
+                  message: 所選日期已有預約或不可預訂
+                  message_en: Room is not available for the selected dates
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /bookings/{id}:
+    parameters:
+      - $ref: '#/components/parameters/BookingIdParam'
+
+    get:
+      tags: [Bookings]
+      operationId: getBooking
+      summary: Get booking detail (admin)
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Booking detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Booking'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Bookings]
+      operationId: updateBooking
+      summary: Update booking (admin)
+      description: |
+        Update booking details, status, notes, etc.
+        When changing dates/room, validates availability.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingUpdateRequest'
+      responses:
+        '200':
+          description: Booking updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Booking'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict (e.g. double-booking when changing dates)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+    delete:
+      tags: [Bookings]
+      operationId: deleteBooking
+      summary: Delete booking (admin)
+      description: Permanently deletes a booking. Use status update to "cancelled" for soft cancel.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '200':
+          description: Booking deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 預約已刪除
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{id}/notes:
+    parameters:
+      - $ref: '#/components/parameters/BookingIdParam'
+    post:
+      tags: [Bookings]
+      operationId: addBookingNote
+      summary: Add internal note to booking
+      description: |
+        Append a timestamped internal note to a booking.
+        Useful for tracking communications, special requests, etc.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                  example: 旅客來電確認入住時間為下午3點
+              required: [content]
+      responses:
+        '201':
+          description: Note added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/BookingNote'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/calendar:
+    get:
+      tags: [Bookings]
+      operationId: getBookingCalendar
+      summary: Calendar view of bookings
+      description: |
+        Returns booking data organized for calendar display.
+        Each entry represents one room-day with its status
+        (available / booked / blocked / checked_in).
+
+        Blocked dates include a reason/comment that can be shown
+        as a tooltip on hover in the admin calendar UI.
+
+        Typically used with a 1-month date range.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+        - name: room_id
+          in: query
+          schema:
+            type: integer
+          description: Filter to specific room (omit for all rooms)
+      responses:
+        '200':
+          description: Calendar data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      from:
+                        type: string
+                        format: date
+                      to:
+                        type: string
+                        format: date
+                      rooms:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            room_id:
+                              type: integer
+                            room_slug:
+                              type: string
+                            room_name_zh:
+                              type: string
+                            days:
+                              type: array
+                              items:
+                                $ref: '#/components/schemas/CalendarEntry'
+                          required: [room_id, room_slug, room_name_zh, days]
+                    required: [from, to, rooms]
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # BLOCKED DATES
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /blocked-dates:
+    get:
+      tags: [Blocked Dates]
+      operationId: listBlockedDates
+      summary: List blocked date ranges
+      description: |
+        List all blocked date ranges. Can filter by room or date range.
+        Used by admin to manage room unavailability (owner travel, maintenance, etc.).
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: room_id
+          in: query
+          schema:
+            type: integer
+          description: Filter by room (omit for all rooms including global blocks)
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter blocks overlapping this start date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter blocks overlapping this end date
+        - name: active_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Only return blocks that haven't fully passed yet
+      responses:
+        '200':
+          description: Blocked date list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BlockedDate'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Blocked Dates]
+      operationId: createBlockedDate
+      summary: Block date range
+      description: |
+        Block a date range for a specific room or all rooms.
+        Reason is required — it's shown as a tooltip when users hover on blocked dates.
+        Example reasons: "老闆出國旅遊", "房間維修", "私人使用"
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockedDateCreateRequest'
+      responses:
+        '201':
+          description: Date range blocked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/BlockedDate'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Overlapping confirmed bookings exist in this range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error:
+                  code: CONFLICT
+                  message: 此日期範圍內已有確認的預約，無法封鎖
+                  message_en: Cannot block dates with existing confirmed bookings
+
+  /blocked-dates/{id}:
+    parameters:
+      - $ref: '#/components/parameters/BlockedDateIdParam'
+
+    put:
+      tags: [Blocked Dates]
+      operationId: updateBlockedDate
+      summary: Update blocked date range
+      description: Update the date range, room, or reason of a blocked period.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BlockedDateUpdateRequest'
+      responses:
+        '200':
+          description: Blocked date updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/BlockedDate'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Blocked Dates]
+      operationId: deleteBlockedDate
+      summary: Remove blocked date range
+      description: Unblock a previously blocked date range.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '200':
+          description: Block removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 封鎖日期已移除
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # MEDIA (Site-wide image management)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /media:
+    get:
+      tags: [Media]
+      operationId: listMedia
+      summary: List media items
+      description: |
+        List media items, optionally filtered by target (page/section).
+        Public for serving images, admin for management.
+
+        Target values map to website sections:
+        - `homepage_hero` — Hero carousel
+        - `homepage_8688`, `homepage_cats`, `homepage_bnb` — Homepage sections
+        - `about` — About page
+        - `rooms_overview` — Rooms overview thumbnails
+        - `room_r1`, `room_r2`, ... — Per-room galleries
+        - `booking_info` — Booking info page
+        - `location` — Location page
+        - `gallery` — General photo gallery
+        - `brand` — Logo and brand assets
+      parameters:
+        - name: target
+          in: query
+          schema:
+            type: string
+          description: Filter by target (page/section slug)
+          example: homepage_hero
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+      responses:
+        '200':
+          description: Media list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MediaItem'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+                required: [success, data]
+
+  /media/targets:
+    get:
+      tags: [Media]
+      operationId: listMediaTargets
+      summary: List available media targets
+      description: |
+        Returns all defined media targets (page/section identifiers) with
+        their display names and current image count. Useful for the admin
+        media manager UI to show which sections have images.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Media target list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        target:
+                          type: string
+                          example: homepage_hero
+                        label_zh:
+                          type: string
+                          example: 首頁輪播
+                        label_en:
+                          type: string
+                          example: Homepage Hero Carousel
+                        image_count:
+                          type: integer
+                          example: 4
+                      required: [target, label_zh, image_count]
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /media/upload:
+    post:
+      tags: [Media]
+      operationId: uploadMedia
+      summary: Upload image to a page/section
+      description: |
+        Upload an image file for a specific page/section target.
+
+        Security:
+        - Allowed types: JPEG, PNG, WebP (validated by magic bytes, not just extension)
+        - Max file size: 10MB
+        - Filename is replaced with a UUID
+        - Original filename stored in DB only
+
+        Target must be a valid section identifier (see GET /media/targets).
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, or WebP, max 10MB)
+                target:
+                  type: string
+                  example: homepage_hero
+                  description: Which page/section this image belongs to
+                alt_text:
+                  type: string
+                  maxLength: 200
+                  example: 民宿外觀夜景
+                  description: Alt text for accessibility/SEO
+                sort_order:
+                  type: integer
+                  minimum: 0
+                  description: Display order within the target group
+              required: [file, target]
+      responses:
+        '201':
+          description: Image uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaUploadResponse'
+        '400':
+          description: Invalid file type or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error:
+                  code: UPLOAD_INVALID_TYPE
+                  message: 只允許 JPEG、PNG、WebP 格式的圖片
+                  message_en: Only JPEG, PNG, and WebP images are allowed
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error:
+                  code: UPLOAD_FILE_TOO_LARGE
+                  message: 檔案大小超過 10MB 上限
+                  message_en: File size exceeds 10MB limit
+
+  /media/{id}:
+    parameters:
+      - $ref: '#/components/parameters/MediaIdParam'
+
+    put:
+      tags: [Media]
+      operationId: updateMedia
+      summary: Update media metadata
+      description: Update alt text, sort order, or target of a media item.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                alt_text:
+                  type: string
+                  maxLength: 200
+                target:
+                  type: string
+                  description: Move image to a different page/section
+                sort_order:
+                  type: integer
+                  minimum: 0
+              minProperties: 1
+      responses:
+        '200':
+          description: Media updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/MediaItem'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Media]
+      operationId: deleteMedia
+      summary: Delete media item
+      description: |
+        Delete a media item. Removes both the DB record and the file from disk.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '200':
+          description: Media deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 圖片已刪除
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /media/reorder:
+    put:
+      tags: [Media]
+      operationId: reorderMedia
+      summary: Reorder media items within a target
+      description: |
+        Set the display order of media items within a target group.
+        Provide an ordered array of media IDs — they will be assigned
+        sort_order values 0, 1, 2, ... in that order.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaReorderRequest'
+      responses:
+        '200':
+          description: Media reordered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 圖片排序已更新
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # PAGES (CMS)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /pages:
+    get:
+      tags: [Pages]
+      operationId: listPages
+      summary: List all pages
+      description: |
+        Public endpoint — returns published pages.
+        Admin users can see drafts with `include_drafts=true`.
+      parameters:
+        - name: include_drafts
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include unpublished draft pages (admin only)
+      responses:
+        '200':
+          description: Page list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Page'
+                required: [success, data]
+
+  /pages/{slug}:
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Page slug (e.g. about, booking-info, location)
+
+    get:
+      tags: [Pages]
+      operationId: getPage
+      summary: Get page by slug
+      description: Public endpoint — returns page content.
+      responses:
+        '200':
+          description: Page content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Page'
+                required: [success, data]
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Pages]
+      operationId: updatePage
+      summary: Update page content (CMS)
+      description: |
+        Update page title, content, meta, or publish status.
+        HTML content is sanitized server-side using DOMPurify.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageUpdateRequest'
+      responses:
+        '200':
+          description: Page updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Page'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # NEWS (最新消息)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /news:
+    get:
+      tags: [News]
+      operationId: listNews
+      summary: List news items
+      description: |
+        Public endpoint — returns visible, published news items.
+        Sorted by pinned first, then by published_at descending.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: include_hidden
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include hidden news items (admin only)
+      responses:
+        '200':
+          description: News list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NewsItem'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+                required: [success, data]
+
+    post:
+      tags: [News]
+      operationId: createNews
+      summary: Create news item
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsCreateRequest'
+      responses:
+        '201':
+          description: News created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/NewsItem'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /news/{id}:
+    parameters:
+      - $ref: '#/components/parameters/NewsIdParam'
+
+    get:
+      tags: [News]
+      operationId: getNewsItem
+      summary: Get news item
+      responses:
+        '200':
+          description: News detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/NewsItem'
+                required: [success, data]
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [News]
+      operationId: updateNews
+      summary: Update news item
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsUpdateRequest'
+      responses:
+        '200':
+          description: News updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/NewsItem'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [News]
+      operationId: deleteNews
+      summary: Delete news item
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      responses:
+        '200':
+          description: News deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: 消息已刪除
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # DASHBOARD
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /dashboard/stats:
+    get:
+      tags: [Dashboard]
+      operationId: getDashboardStats
+      summary: Dashboard overview stats
+      description: |
+        Returns key metrics for the admin dashboard:
+        - Today's check-ins and check-outs
+        - Current occupancy rate
+        - Upcoming bookings (next 7 days)
+        - Pending bookings awaiting confirmation
+        - Monthly revenue estimate
+        - Unprocessed webhook count
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DashboardStats'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /dashboard/recent-bookings:
+    get:
+      tags: [Dashboard]
+      operationId: getRecentBookings
+      summary: Recent bookings for dashboard
+      description: Returns the 10 most recently created bookings.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+      responses:
+        '200':
+          description: Recent bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Booking'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /dashboard/occupancy:
+    get:
+      tags: [Dashboard]
+      operationId: getOccupancy
+      summary: Room occupancy data
+      description: |
+        Returns daily occupancy data for all rooms in a date range.
+        Used for calendar heatmap / occupancy chart on the dashboard.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/DateFromParam'
+        - $ref: '#/components/parameters/DateToParam'
+      responses:
+        '200':
+          description: Occupancy data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OccupancyEntry'
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # WEBHOOKS (Unified OTA Channel Manager)
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /webhooks/ingest:
+    post:
+      tags: [Webhooks]
+      operationId: ingestWebhook
+      summary: Receive OTA channel manager webhook
+      description: |
+        Unified webhook endpoint for receiving booking events from
+        channel managers (e.g. SiteMinder, Cloudbeds) or direct OTA
+        integrations (Agoda, Booking.com, Trip.com, etc.).
+
+        A single endpoint handles all platforms — the `platform` field
+        in the payload identifies the source.
+
+        Events are logged and can be auto-processed or manually reviewed
+        by the admin.
+
+        **Authentication:** Requires the `X-Webhook-Key` header matching
+        the configured WEBHOOK_API_KEY.
+      security:
+        - webhookApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookIngestRequest'
+      responses:
+        '200':
+          description: Webhook received and logged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      event_id:
+                        type: integer
+                        description: ID of the created webhook event log entry
+                      status:
+                        type: string
+                        enum: [received, processed]
+                    required: [event_id, status]
+                required: [success, data]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          description: Invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error:
+                  code: AUTH_INVALID_CREDENTIALS
+                  message: Webhook API key 無效
+                  message_en: Invalid webhook API key
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /webhooks/events:
+    get:
+      tags: [Webhooks]
+      operationId: listWebhookEvents
+      summary: List webhook event log
+      description: |
+        View all received webhook events with filtering.
+        Admin only — used for debugging and audit.
+      security:
+        - cookieAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [received, processed, failed, ignored]
+        - name: platform
+          in: query
+          schema:
+            type: string
+          description: Filter by source platform
+        - name: event_type
+          in: query
+          schema:
+            type: string
+            enum: [new_booking, modify_booking, cancel_booking, rate_update, inventory_update, unknown]
+      responses:
+        '200':
+          description: Webhook event list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WebhookEvent'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+                required: [success, data, meta]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /webhooks/events/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Webhook event ID
+
+    get:
+      tags: [Webhooks]
+      operationId: getWebhookEvent
+      summary: Get webhook event detail
+      description: View full payload and processing status of a webhook event.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Webhook event detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WebhookEvent'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Webhooks]
+      operationId: updateWebhookEventStatus
+      summary: Update webhook event status
+      description: |
+        Manually mark a webhook event as processed, ignored, etc.
+        Used by admin to manage unprocessed events.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [processed, ignored, failed]
+                error_message:
+                  type: string
+                  maxLength: 500
+              required: [status]
+      responses:
+        '200':
+          description: Event status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WebhookEvent'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SYSTEM
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /system/info:
+    get:
+      tags: [System]
+      operationId: getSystemInfo
+      summary: System information
+      description: |
+        Returns system info including versions, uptime, and service status.
+        Admin only.
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: System info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SystemInfo'
+                required: [success, data]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
