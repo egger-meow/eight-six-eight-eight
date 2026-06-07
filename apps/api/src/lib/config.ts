@@ -9,7 +9,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   JWT_SECRET: z.string().optional(),
   CSRF_SECRET: z.string().optional(),
-  ADMIN_DEFAULT_PASSWORD: z.string().min(8).default('8688bnb'),
+  ADMIN_DEFAULT_PASSWORD: z.string().min(8).default('8688bnb!'),
   WEBHOOK_API_KEY: z.string().optional(),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   DATABASE_URL: z.string().url().optional(),

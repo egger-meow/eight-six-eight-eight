@@ -4,13 +4,35 @@ import { doubleCsrfProtection } from '../middleware/csrf';
 import { validate, validateQuery } from '../middleware/validate';
 import { NewsCreateSchema, NewsUpdateSchema } from '../schemas/news.schema';
 import { IdParamSchema, PaginationQuerySchema } from '../schemas/common.schema';
+import { db } from '@8688bnb/db';
 
 const router = Router();
 
-router.get('/', validateQuery(PaginationQuerySchema), (req, res) => {
-  // Public endpoint
-  // TODO: Fetch from DB
-  res.json({ success: true, data: [], meta: { page: 1, per_page: 20, total: 0, total_pages: 0 } });
+router.get('/', validateQuery(PaginationQuerySchema), async (req, res, next) => {
+  try {
+    const page = Number(req.query.page || 1);
+    const per_page = Number(req.query.per_page || 10);
+    
+    // Only return visible news for public endpoint
+    const where = { visible: true };
+    const [total, news] = await Promise.all([
+      db.news.count({ where }),
+      db.news.findMany({
+        where,
+        skip: (page - 1) * per_page,
+        take: per_page,
+        orderBy: [{ pinned: 'desc' }, { publishedAt: 'desc' }, { createdAt: 'desc' }]
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: news,
+      meta: { page, per_page, total, total_pages: Math.ceil(total / per_page) }
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.post('/', requireAdmin, doubleCsrfProtection, validate(NewsCreateSchema), (req, res) => {

@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  displayName  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Room {
+  id           Int      @id @default(autoincrement())
+  slug         String   @unique
+  nameZh       String
+  nameEn       String?
+  capacity     Int
+  type         String
+  description  String?
+  amenities    String[]
+  priceWeekday Int
+  priceWeekend Int
+  priceHoliday Int
+  available    Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookings     Booking[]
+  blockedDates BlockedDate[]
+}
+
+model Booking {
+  id             Int      @id @default(autoincrement())
+  roomId         Int
+  checkIn        DateTime @db.Date
+  checkOut       DateTime @db.Date
+  guestName      String
+  guestPhone     String
+  guestEmail     String?
+  guestCount     Int
+  totalPrice     Int?
+  status         String   @default("pending")
+  notes          String?
+  source         String   @default("website")
+  otaPlatform    String?
+  otaBookingId   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  room           Room     @relation(fields: [roomId], references: [id])
+}
+
+model BlockedDate {
+  id        Int      @id @default(autoincrement())
+  roomId    Int?
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room      Room?    @relation(fields: [roomId], references: [id])
+}
+
+model Media {
+  id               Int      @id @default(autoincrement())
+  target           String
+  filenameOriginal String
+  filenameStored   String
+  url              String
+  mimeType         String
+  sizeBytes        Int
+  altText          String?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([target])
+}
+
+model Page {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique
+  titleZh     String
+  titleEn     String?
+  contentHtml String?
+  meta        Json?
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model News {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  publishedAt DateTime?
+  visible     Boolean  @default(true)
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WebhookEvent {
+  id                Int      @id @default(autoincrement())
+  eventType         String
+  platform          String
+  externalBookingId String?
+  data              Json?
+  status            String   @default("received")
+  errorMessage      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}

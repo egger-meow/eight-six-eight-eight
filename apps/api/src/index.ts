@@ -31,10 +31,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Connect to Redis for Rate Limiting
-redisClient.connect().then(() => {
-  console.log('📦 Redis connected for Rate Limiting');
-}).catch(console.error);
+
 
 // ── Health Check (No rate limiting needed)
 app.get('/api/v1/health', (req, res) => {
@@ -71,10 +68,13 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Start server
-app.listen(config.API_PORT, '127.0.0.1', () => {
-  console.log(`🚀 API Server listening on http://127.0.0.1:${config.API_PORT}`);
-  console.log(`   Environment: ${config.NODE_ENV}`);
-});
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(config.API_PORT, HOST, () => {
+    console.log(`🚀 API Server listening on http://${HOST}:${config.API_PORT}`);
+    console.log(`   Environment: ${config.NODE_ENV}`);
+  });
+}
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
@@ -82,3 +82,5 @@ process.on('SIGTERM', async () => {
   await redisClient.quit();
   process.exit(0);
 });
+
+export default app;

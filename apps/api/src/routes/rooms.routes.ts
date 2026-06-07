@@ -5,11 +5,19 @@ import { validate, validateQuery } from '../middleware/validate';
 import { RoomCreateSchema, RoomUpdateSchema } from '../schemas/rooms.schema';
 import { DateRangeQuerySchema, SlugParamSchema } from '../schemas/common.schema';
 
+import { db } from '@8688bnb/db';
+
 const router = Router();
 
-router.get('/', (req, res) => {
-  // TODO: Fetch from DB
-  res.json({ success: true, data: [] });
+router.get('/', async (req, res, next) => {
+  try {
+    const rooms = await db.room.findMany({
+      orderBy: { sortOrder: 'asc' }
+    });
+    res.json({ success: true, data: rooms });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.post('/', requireAdmin, doubleCsrfProtection, validate(RoomCreateSchema), (req, res) => {
@@ -17,9 +25,18 @@ router.post('/', requireAdmin, doubleCsrfProtection, validate(RoomCreateSchema),
   res.status(201).json({ success: true, data: { ...req.body, id: 1 } });
 });
 
-router.get('/:slug', validateQuery(SlugParamSchema), (req, res) => {
-  // TODO: Fetch from DB
-  res.json({ success: true, data: { id: 1, slug: req.params.slug } });
+router.get('/:slug', validateQuery(SlugParamSchema), async (req, res, next) => {
+  try {
+    const room = await db.room.findUnique({
+      where: { slug: req.params.slug }
+    });
+    if (!room) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Room not found' } });
+    }
+    res.json({ success: true, data: room });
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.put('/:slug', requireAdmin, doubleCsrfProtection, validateQuery(SlugParamSchema), validate(RoomUpdateSchema), (req, res) => {

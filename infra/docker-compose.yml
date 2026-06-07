@@ -61,6 +61,8 @@ services:
     image: postgres:16-alpine
     container_name: 8688bnb-postgres
     restart: unless-stopped
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_DB: 8688bnb
       POSTGRES_USER: 8688bnb_user
@@ -149,9 +151,12 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: 8688bnb-tunnel
     restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    command: tunnel --no-autoupdate --protocol http2 run --token ${TUNNEL_TOKEN}
     environment:
       - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    dns:
+      - "1.1.1.1"
+      - "8.8.8.8"
     depends_on:
       nginx-proxy-manager:
         condition: service_healthy
@@ -184,30 +189,64 @@ services:
   #       condition: service_healthy
   #   networks: [8688bnb_net]
 
-  # ── NestJS API ───────────────────────────────────────────────────────────
-  # api:
-  #   build:
-  #     context: ..
-  #     dockerfile: apps/api/Dockerfile
-  #   container_name: 8688bnb-api
-  #   restart: unless-stopped
-  #   expose: ["3333"]
-  #   environment:
-  #     NODE_ENV: production
-  #     DATABASE_URL: postgresql://8688bnb_user:${POSTGRES_PASSWORD}@postgres:5432/8688bnb
-  #     REDIS_URL: redis://redis:6379
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3333/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     start_period: 30s
-  #     retries: 3
-  #   networks: [8688bnb_net]
+  # ── Express API ───────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: 8688bnb-api
+    restart: unless-stopped
+    expose: ["3333"]
+    environment:
+      NODE_ENV: production
+      API_PORT: "3333"
+      DATABASE_URL: postgresql://8688bnb_user:${POSTGRES_PASSWORD}@postgres:5432/8688bnb
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      CSRF_SECRET: ${CSRF_SECRET}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-8688bnb123}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://8688bnb.com,https://admin.8688bnb.com}
+      WEBHOOK_API_KEY: ${WEBHOOK_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3333/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks: [8688bnb_net]
+
+  seed:
+    image: node:20
+    container_name: 8688bnb-seed
+    working_dir: /db
+    volumes:
+      - ../packages/db:/db
+      - ../apps/website/src/data:/seed-data
+    environment:
+      DATABASE_URL: postgresql://8688bnb_user:${POSTGRES_PASSWORD}@postgres:5432/8688bnb
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-8688bnb}
+    command: >
+      sh -c "npm install &&
+             npx prisma@5 generate &&
+             npx prisma@5 db push --accept-data-loss &&
+             npx tsx src/seed.ts"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["seed"]
+    networks:
+      - 8688bnb_net
 
 # ── Networks ─────────────────────────────────────────────────────────────────
 networks:
@@ -220,8 +259,10 @@ networks:
 volumes:
   npm_data:
     name: 8688bnb_npm_data
+    external: true
   npm_letsencrypt:
     name: 8688bnb_npm_letsencrypt
+    external: true
   postgres_data:
     name: 8688bnb_postgres_data
   redis_data:

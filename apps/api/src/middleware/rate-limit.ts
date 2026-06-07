@@ -6,7 +6,10 @@ import { config } from '../lib/config';
 // Redis Client
 export const redisClient = createClient({ url: config.REDIS_URL });
 redisClient.on('error', (err) => console.error('Redis Client Error', err));
-// We connect asynchronously in the main app startup
+// Connect immediately and save the promise
+const redisConnectPromise = redisClient.connect().catch(err => {
+  console.error('Failed to connect to Redis for Rate Limiting:', err);
+});
 
 // Common error handler for rate limits
 const handler = (req: any, res: any) => {
@@ -28,7 +31,10 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
   handler,
   store: new RedisStore({
-    sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+    sendCommand: async (...args: string[]) => {
+      await redisConnectPromise;
+      return redisClient.sendCommand(args);
+    },
     prefix: 'rl:auth:'
   })
 });
@@ -41,7 +47,10 @@ export const generalLimiter = rateLimit({
   legacyHeaders: false,
   handler,
   store: new RedisStore({
-    sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+    sendCommand: async (...args: string[]) => {
+      await redisConnectPromise;
+      return redisClient.sendCommand(args);
+    },
     prefix: 'rl:api:'
   })
 });
@@ -54,7 +63,10 @@ export const publicLimiter = rateLimit({
   legacyHeaders: false,
   handler,
   store: new RedisStore({
-    sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+    sendCommand: async (...args: string[]) => {
+      await redisConnectPromise;
+      return redisClient.sendCommand(args);
+    },
     prefix: 'rl:pub:'
   })
 });

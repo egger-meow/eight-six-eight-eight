@@ -1,0 +1,96 @@
+import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const db = new PrismaClient();
+
+async function main() {
+  console.log('🌱 Starting database seed...');
+
+  // 1. Create default admin user
+  const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || '8688bnb';
+  const passwordHash = await bcrypt.hash(adminPassword, 12);
+  
+  const admin = await db.user.upsert({
+    where: { username: 'yenfeng' },
+    update: {},
+    create: {
+      username: 'yenfeng',
+      displayName: '黃筵丰',
+      passwordHash,
+    },
+  });
+  console.log('✅ Default admin user ensured:', admin.username);
+
+  // 2. Read rooms.json and seed rooms
+  const roomsJsonPath = path.join(__dirname, '../../../apps/website/src/data/rooms.json');
+  if (fs.existsSync(roomsJsonPath)) {
+    const roomsData = JSON.parse(fs.readFileSync(roomsJsonPath, 'utf8'));
+    
+    let sortOrder = 0;
+    for (const roomData of roomsData) {
+      sortOrder += 10;
+      const room = await db.room.upsert({
+        where: { slug: roomData.slug },
+        update: {
+          nameZh: roomData.name_zh,
+          nameEn: roomData.name_en,
+          capacity: roomData.capacity,
+          type: roomData.type,
+          description: roomData.description,
+          priceWeekday: roomData.price_weekday,
+          priceWeekend: roomData.price_weekend,
+          priceHoliday: roomData.price_holiday,
+          sortOrder,
+        },
+        create: {
+          slug: roomData.slug,
+          nameZh: roomData.name_zh,
+          nameEn: roomData.name_en,
+          capacity: roomData.capacity,
+          type: roomData.type,
+          description: roomData.description,
+          priceWeekday: roomData.price_weekday,
+          priceWeekend: roomData.price_weekend,
+          priceHoliday: roomData.price_holiday,
+          sortOrder,
+        },
+      });
+      console.log(`✅ Room ensured: ${room.nameZh} (${room.slug})`);
+    }
+  } else {
+    console.warn(`⚠️ rooms.json not found at ${roomsJsonPath}`);
+  }
+
+  // 3. Seed pages
+  const pages = [
+    { slug: 'about', titleZh: '關於86.88民宿', titleEn: 'About 86.88 B&B' },
+    { slug: 'booking-info', titleZh: '訂房資訊', titleEn: 'Booking Information' },
+    { slug: 'location', titleZh: '民宿位置', titleEn: 'Getting Here' }
+  ];
+
+  for (const page of pages) {
+    await db.page.upsert({
+      where: { slug: page.slug },
+      update: {},
+      create: {
+        slug: page.slug,
+        titleZh: page.titleZh,
+        titleEn: page.titleEn,
+      }
+    });
+    console.log(`✅ Page ensured: ${page.slug}`);
+  }
+
+  console.log('🎉 Database seed completed successfully.');
+}
+
+main()
+  .catch((e) => {
+    console.error('❌ Seed failed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await db.$disconnect();
+  });

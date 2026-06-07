@@ -1,11 +1,12 @@
 import { Router } from 'express';
-import { requireAdmin } from '../middleware/auth';
+import { requireAdmin, AuthRequest } from '../middleware/auth';
 import { doubleCsrfProtection, generateToken } from '../middleware/csrf';
 import { validate } from '../middleware/validate';
 import { LoginSchema, ChangePasswordSchema } from '../schemas/auth.schema';
 import { signToken, verifyToken } from '../lib/jwt';
 import { hashPassword, verifyPassword } from '../lib/password';
 import { config } from '../lib/config';
+import { db } from '@8688bnb/db';
 
 const router = Router();
 
@@ -13,30 +14,24 @@ router.post('/login', validate(LoginSchema), async (req, res, next) => {
   try {
     const { username, password } = req.body;
 
-    // TODO: Fetch from DB. For now, hardcode admin user logic
-    if (username !== 'yenfeng') {
+    const user = await db.user.findUnique({ where: { username } });
+
+    if (!user) {
       return res.status(401).json({
         success: false,
-        error: {
-          code: 'AUTH_INVALID_CREDENTIALS',
-          message: '帳號或密碼錯誤'
-        }
+        error: { code: 'AUTH_INVALID_CREDENTIALS', message: '帳號或密碼錯誤' }
       });
     }
 
-    // Mock hash check
-    const isMatch = password === config.ADMIN_DEFAULT_PASSWORD; // Replace with proper DB check later
+    const isMatch = await verifyPassword(password, user.passwordHash);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        error: {
-          code: 'AUTH_INVALID_CREDENTIALS',
-          message: '帳號或密碼錯誤'
-        }
+        error: { code: 'AUTH_INVALID_CREDENTIALS', message: '帳號或密碼錯誤' }
       });
     }
 
-    const payload = { userId: 1, username: 'yenfeng' };
+    const payload = { userId: user.id, username: user.username };
     const token = signToken(payload);
 
     res.cookie('__Host-8688_session', token, {
@@ -49,7 +44,7 @@ router.post('/login', validate(LoginSchema), async (req, res, next) => {
     res.json({
       success: true,
       data: {
-        user: { id: 1, username: 'yenfeng', display_name: '黃筵丰', created_at: new Date().toISOString() },
+        user: { id: user.id, username: user.username, display_name: user.displayName, created_at: user.createdAt.toISOString() },
         csrf_token: generateToken(req, res)
       }
     });
@@ -63,18 +58,35 @@ router.post('/logout', requireAdmin, doubleCsrfProtection, (req, res) => {
   res.json({ success: true, data: { message: '已成功登出' } });
 });
 
-router.get('/me', requireAdmin, (req, res) => {
-  res.json({
-    success: true,
-    data: { id: 1, username: 'yenfeng', display_name: '黃筵丰', created_at: new Date().toISOString() }
-  });
+router.get('/me', requireAdmin, async (req: AuthRequest, res, next) => {
+  try {
+    const user = await db.user.findUnique({ where: { id: req.user?.userId } });
+    if (!user) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+    }
+    res.json({
+      success: true,
+      data: { id: user.id, username: user.username, display_name: user.displayName, created_at: user.createdAt.toISOString() }
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
-router.put('/password', requireAdmin, doubleCsrfProtection, validate(ChangePasswordSchema), async (req, res, next) => {
+router.put('/password', requireAdmin, doubleCsrfProtection, validate(ChangePasswordSchema), async (req: AuthRequest, res, next) => {
   try {
     const { current_password, new_password } = req.body;
-    // TODO: Verify current_password against DB
-    // TODO: Hash new_password and save to DB
+    const user = await db.user.findUnique({ where: { id: req.user?.userId } });
+    
+    if (!user || !(await verifyPassword(current_password, user.passwordHash))) {
+      return res.status(401).json({ success: false, error: { code: 'AUTH_INVALID_CREDENTIALS', message: '目前密碼錯誤' } });
+    }
+
+    const newPasswordHash = await hashPassword(new_password);
+    await db.user.update({
+      where: { id: user.id },
+      data: { passwordHash: newPasswordHash }
+    });
     
     // Invalidate session
     res.clearCookie('__Host-8688_session');
