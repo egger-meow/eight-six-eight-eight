@@ -236,6 +236,7 @@ services:
     environment:
       DATABASE_URL: postgresql://8688bnb_user:${POSTGRES_PASSWORD}@postgres:5432/8688bnb
       ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-8688bnb}
+      SEED_DATA_DIR: /seed-data    
     command: >
       sh -c "npm install &&
              npx prisma@5 generate &&
