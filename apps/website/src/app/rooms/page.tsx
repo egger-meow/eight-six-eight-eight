@@ -1,15 +1,24 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLang } from '@/context/LanguageContext';
 import { roomsPage } from '@/data/content';
-import roomsData from '@/data/rooms.json';
+import { getRooms, mediaUrl, type WebsiteRoom } from '@/lib/api';
 import styles from './page.module.css';
 
 export default function Rooms() {
   const { t } = useLang();
+  const [rooms, setRooms] = useState<WebsiteRoom[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    getRooms().then(({ rooms }) => {
+      if (mounted) setRooms(rooms.filter((room) => room.available !== false));
+    });
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -26,11 +35,10 @@ export default function Rooms() {
     );
     reveals.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
+  }, [rooms.length]);
 
   return (
     <div className={styles.subPage}>
-      {/* SubPage Header */}
       <div className={styles.pageHeader}>
         <div className="container">
           <div className="reveal">
@@ -45,17 +53,17 @@ export default function Rooms() {
       <section className={styles.contentSection}>
         <div className="container">
           <div className={styles.roomGrid}>
-            {roomsData.map((room, idx) => (
-              <div 
-                key={room.id} 
+            {rooms.map((room, idx) => (
+              <div
+                key={room.id}
                 className={`reveal ${styles.roomCard}`}
                 style={{ transitionDelay: `${idx * 0.1}s` }}
               >
                 <Link href={`/rooms/${room.slug}`} className={styles.imgLink}>
                   <div className={styles.roomImgWrap}>
-                    <Image 
-                      src={room.images[0]} 
-                      alt={room.name_zh}
+                    <Image
+                      src={mediaUrl(room.images[0]?.url)}
+                      alt={room.images[0]?.alt_text || room.name_zh}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       style={{ objectFit: 'cover' }}
@@ -87,14 +95,9 @@ export default function Rooms() {
                     <Link href={`/rooms/${room.slug}`} className={styles.detailLink}>
                       {t(roomsPage.detailBtn)}
                     </Link>
-                    <a 
-                      href="http://line.naver.jp/ti/p/~@gps2290j" 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className={styles.bookLink}
-                    >
+                    <Link href={`/booking?room=${room.slug}`} className={styles.bookLink}>
                       {t(roomsPage.bookBtn)}
-                    </a>
+                    </Link>
                   </div>
                 </div>
               </div>

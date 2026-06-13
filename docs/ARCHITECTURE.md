@@ -139,7 +139,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3333/api/v1 npm run dev --workspace @8688bn
 Website:
 
 ```bash
-npm run dev --workspace @8688bnb/website
+NEXT_PUBLIC_API_URL=http://localhost:3333/api/v1 npm run dev --workspace @8688bnb/website
 ```
 
-Use port 3001 for admin and 3000 for website.
+Use port 3001 for admin and 3000 for website. `NEXT_PUBLIC_API_URL` must be browser-reachable, for example `https://api.8688bnb.com/api/v1` in production.

@@ -31,12 +31,15 @@ services:
     build:
       context: ..                          # monorepo root
       dockerfile: apps/website/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${WEBSITE_PUBLIC_API_URL:-https://api.8688bnb.com/api/v1}
     container_name: 8688bnb-website
     restart: unless-stopped
     environment:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=${WEBSITE_PUBLIC_API_URL:-https://api.8688bnb.com/api/v1}
     # Port 3000 is NOT exposed to the host — only accessible via Docker network
     # NPM routes traffic to this container internally
     expose:

@@ -34,6 +34,8 @@ RUN npm ci
 # Copy the actual source files
 COPY --from=pruner /app/out/full/ .
 
+ARG NEXT_PUBLIC_API_URL=https://api.8688bnb.com/api/v1
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
@@ -46,6 +48,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=https://api.8688bnb.com/api/v1
 
 # Security: run as non-root user
 RUN addgroup --system --gid 1001 nodejs && \

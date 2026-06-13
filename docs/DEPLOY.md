@@ -115,10 +115,12 @@ cp .env.example .env
 vi .env
 ```
 
-請確保 `.env` 中填入你的 Cloudflare Tunnel Token，以及必要的資料庫密碼：
+請確保 `.env` 中填入你的 Cloudflare Tunnel Token、必要的資料庫密碼，以及瀏覽器可連到的 API URL：
 ```
 TUNNEL_TOKEN=eyJhIjoi...（你的完整 token）
 POSTGRES_PASSWORD=yenfeng
+WEBSITE_PUBLIC_API_URL=https://api.8688bnb.com/api/v1
+ADMIN_PUBLIC_API_URL=https://api.8688bnb.com/api/v1
 ```
 
 ### Step 4: 建構並啟動所有服務

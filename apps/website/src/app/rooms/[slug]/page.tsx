@@ -1,18 +1,26 @@
 'use client';
 
-import { useEffect, use } from 'react';
+import { useEffect, use, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { useLang } from '@/context/LanguageContext';
 import { roomsPage } from '@/data/content';
-import roomsData from '@/data/rooms.json';
+import { getRoom, mediaUrl, type WebsiteRoom } from '@/lib/api';
 import styles from './page.module.css';
 
 export default function RoomDetail({ params }: { params: Promise<{ slug: string }> }) {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const resolvedParams = use(params);
-  const room = roomsData.find((r) => r.slug === resolvedParams.slug);
+  const [room, setRoom] = useState<WebsiteRoom | null | undefined>(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+    getRoom(resolvedParams.slug).then(({ room }) => {
+      if (mounted) setRoom(room);
+    });
+    return () => { mounted = false; };
+  }, [resolvedParams.slug]);
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -29,15 +37,18 @@ export default function RoomDetail({ params }: { params: Promise<{ slug: string 
     );
     reveals.forEach((el) => obs.observe(el));
     return () => obs.disconnect();
-  }, []);
+  }, [room?.slug]);
+
+  if (room === null) {
+    notFound();
+  }
 
   if (!room) {
-    notFound();
+    return null;
   }
 
   return (
     <div className={styles.subPage}>
-      {/* SubPage Header */}
       <div className={styles.pageHeader}>
         <div className="container">
           <div className="reveal">
@@ -50,15 +61,14 @@ export default function RoomDetail({ params }: { params: Promise<{ slug: string 
 
       <section className={styles.contentSection}>
         <div className="container">
-          {/* Gallery Grid */}
           <div className={`reveal ${styles.gallery}`}>
             {room.images.map((img, i) => (
-              <div key={i} className={`${styles.imgWrap} ${i === 0 ? styles.imgMain : ''}`}>
-                <Image 
-                  src={img} 
-                  alt={`${room.name_zh} ${i}`} 
-                  fill 
-                  sizes={i === 0 ? "(max-width: 768px) 100vw, 800px" : "(max-width: 768px) 50vw, 400px"}
+              <div key={`${img.url}-${i}`} className={`${styles.imgWrap} ${i === 0 ? styles.imgMain : ''}`}>
+                <Image
+                  src={mediaUrl(img.url)}
+                  alt={img.alt_text || `${room.name_zh} ${i + 1}`}
+                  fill
+                  sizes={i === 0 ? '(max-width: 768px) 100vw, 800px' : '(max-width: 768px) 50vw, 400px'}
                   style={{ objectFit: 'cover' }}
                   priority={i === 0}
                 />
@@ -70,7 +80,7 @@ export default function RoomDetail({ params }: { params: Promise<{ slug: string 
             <div className={`reveal ${styles.infoCol}`}>
               <h2 className={styles.sectionTitle}>{t({ zh: '房間介紹', en: 'Room Introduction' })}</h2>
               <p className={styles.description}>{room.description}</p>
-              
+
               <div className={styles.roomSpecs}>
                 <div className={styles.specItem}>
                   <span className={styles.specLabel}>{t({ zh: '容納人數', en: 'Capacity' })}</span>
@@ -86,7 +96,7 @@ export default function RoomDetail({ params }: { params: Promise<{ slug: string 
                 <i className="fas fa-arrow-left" /> {t({ zh: '返回所有房型', en: 'Back to All Rooms' })}
               </Link>
             </div>
-            
+
             <div className={`reveal ${styles.sidebarCol}`}>
               <div className={styles.priceCard}>
                 <h3 className={styles.priceTitle}>{t({ zh: '房價資訊', en: 'Pricing' })}</h3>
@@ -105,15 +115,10 @@ export default function RoomDetail({ params }: { params: Promise<{ slug: string 
                   </div>
                 </div>
 
-                <a 
-                  href="http://line.naver.jp/ti/p/~@gps2290j" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className={styles.bookBtn}
-                >
+                <Link href={`/booking?room=${room.slug}`} className={styles.bookBtn}>
                   {t(roomsPage.bookBtn)}
-                </a>
-                <p className={styles.bookNote}>{t({ zh: '透過 LINE 預約享最優惠價格', en: 'Book via LINE for the best rate' })}</p>
+                </Link>
+                <p className={styles.bookNote}>{t({ zh: '送出後由民宿主人確認訂房', en: 'The host will confirm your reservation after submission' })}</p>
               </div>
             </div>
           </div>

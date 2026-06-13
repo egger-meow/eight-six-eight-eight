@@ -80,6 +80,18 @@ router.post('/', validate(BookingCreateSchema), async (req, res, next) => {
     const checkInDate = new Date(data.check_in);
     const checkOutDate = new Date(data.check_out);
 
+    if (checkOutDate <= checkInDate) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_DATE_RANGE', message: '退房日期必須晚於入住日期' } });
+    }
+
+    if (!room.available) {
+      return res.status(409).json({ success: false, error: { code: 'ROOM_UNAVAILABLE', message: '此房型目前未開放預訂' } });
+    }
+
+    if (data.guest_count > room.capacity) {
+      return res.status(400).json({ success: false, error: { code: 'CAPACITY_EXCEEDED', message: '入住人數超過房型可容納人數' } });
+    }
+
     // Check availability
     const conflict = await db.booking.findFirst({
       where: {
@@ -94,6 +106,23 @@ router.post('/', validate(BookingCreateSchema), async (req, res, next) => {
 
     if (conflict) {
       return res.status(409).json({ success: false, error: { code: 'CONFLICT', message: '該時段已被預訂' } });
+    }
+
+    const blockedConflict = await db.blockedDate.findFirst({
+      where: {
+        OR: [
+          { roomId: data.room_id },
+          { roomId: null }
+        ],
+        AND: [
+          { startDate: { lte: checkOutDate } },
+          { endDate: { gte: checkInDate } }
+        ]
+      }
+    });
+
+    if (blockedConflict) {
+      return res.status(409).json({ success: false, error: { code: 'BLOCKED_DATE', message: '該時段目前無法預訂' } });
     }
 
     // Calculate total price

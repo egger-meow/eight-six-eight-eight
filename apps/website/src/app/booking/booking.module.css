@@ -1,11 +1,56 @@
+.header {
+  background-color: var(--primary-color);
+  color: white;
+  padding: 4rem 0 6rem;
+  text-align: center;
+}
+
+.header h1 {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.section {
+  padding-bottom: 5rem;
+}
+
 .bookingForm {
   background: var(--background-light);
   padding: 3rem;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.05);
   margin-top: -2rem;
   position: relative;
   z-index: 10;
+}
+
+.notice,
+.error,
+.success {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  line-height: 1.7;
+}
+
+.notice {
+  background: #fff8e6;
+  border: 1px solid #ead29a;
+  color: #755c1a;
+}
+
+.error {
+  background: #fff0f0;
+  border: 1px solid #e2a6a6;
+  color: #8b2e2e;
+  margin-top: 1.5rem;
+}
+
+.success {
+  background: #edf8f1;
+  border: 1px solid #99c7a8;
+  color: #245a36;
+  margin-top: 1.5rem;
 }
 
 .formGroup {
@@ -26,10 +71,10 @@
   gap: 1.5rem;
 }
 
-@media (max-width: 768px) {
-  .inputGrid {
-    grid-template-columns: 1fr;
-  }
+.inputGrid label,
+.formGroup label {
+  display: grid;
+  gap: 0.5rem;
 }
 
 .formControl {
@@ -61,11 +106,19 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  background: var(--background-offwhite);
+  font: inherit;
+  color: inherit;
 }
 
 .roomCard.selected {
   border-color: var(--primary-color);
   background-color: var(--accent-color);
+}
+
+.roomName,
+.roomCapacity {
+  display: block;
 }
 
 .roomName {
@@ -96,6 +149,7 @@
 .summaryRow {
   display: flex;
   justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1rem;
   font-size: 1.125rem;
 }
@@ -110,15 +164,64 @@
   text-align: right;
 }
 
-.submitBtn {
-  width: 100%;
-  font-size: 1.25rem;
-  padding: 1rem;
+.totalPrice p {
+  font-size: 0.875rem;
+  font-weight: normal;
+  color: rgba(255,255,255,0.7);
+  margin-top: 0.5rem;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
   margin-top: 2rem;
-  background-color: #00B900; /* LINE Green */
+}
+
+.submitBtn,
+.lineBtn {
+  width: 100%;
+  justify-content: center;
+  font-size: 1.05rem;
+  padding: 1rem;
+}
+
+.submitBtn {
+  background-color: var(--primary-color);
   color: white;
 }
 
-.submitBtn:hover {
-  background-color: #009900;
+.submitBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.lineBtn {
+  background-color: #00b900;
+  border-color: #00b900;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .header h1 {
+    font-size: 2.25rem;
+  }
+
+  .bookingForm {
+    padding: 1.5rem;
+  }
+
+  .inputGrid,
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryRow {
+    font-size: 1rem;
+  }
+
+  .totalPrice {
+    font-size: 1.5rem;
+    text-align: left;
+  }
 }
