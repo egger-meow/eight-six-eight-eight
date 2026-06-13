@@ -1,10 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.SESSION_COOKIE_NAME = void 0;
 exports.requireAdmin = requireAdmin;
 const jwt_1 = require("../lib/jwt");
+const config_1 = require("../lib/config");
+exports.SESSION_COOKIE_NAME = config_1.config.NODE_ENV === 'production'
+    ? '__Host-8688_session'
+    : '8688_session';
 function requireAdmin(req, res, next) {
     try {
-        const token = req.cookies['__Host-8688_session'];
+        const token = req.cookies[exports.SESSION_COOKIE_NAME] || req.cookies['__Host-8688_session'];
         if (!token) {
             return res.status(401).json({
                 success: false,

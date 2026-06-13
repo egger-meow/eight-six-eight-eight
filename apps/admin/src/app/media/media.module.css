@@ -85,7 +85,6 @@
   overflow: hidden;
   border: 1px solid var(--border-color);
   position: relative;
-  group: true;
   cursor: pointer;
   transition: transform 0.2s;
 }

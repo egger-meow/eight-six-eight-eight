@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { apiFetch } from '@/lib/api';
+import { apiFetch, API_ORIGIN } from '@/lib/api';
 import styles from './media.module.css';
-import { UploadCloud, Trash2, GripHorizontal } from 'lucide-react';
+import { UploadCloud, Trash2, GripHorizontal, Image as ImageIcon } from 'lucide-react';
 
 export default function MediaPage() {
   const [targets, setTargets] = useState<any[]>([]);
@@ -17,6 +17,9 @@ export default function MediaPage() {
       const res = await apiFetch('/media/targets');
       if (res?.data) {
         setTargets(res.data);
+        if (!res.data.some((t: any) => t.target === selectedTarget) && res.data[0]?.target) {
+          setSelectedTarget(res.data[0].target);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -26,10 +29,8 @@ export default function MediaPage() {
   const fetchMedia = async (target: string) => {
     setLoading(true);
     try {
-      const res = await apiFetch(`/media?target=${target}`);
-      if (res?.data) {
-        setMedia(res.data);
-      }
+      const res = await apiFetch(`/media?target=${encodeURIComponent(target)}&per_page=100`);
+      setMedia(res?.data || []);
     } catch (err) {
       console.error(err);
     } finally {
@@ -45,10 +46,6 @@ export default function MediaPage() {
     fetchMedia(selectedTarget);
   }, [selectedTarget]);
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -61,38 +58,32 @@ export default function MediaPage() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('target', selectedTarget);
-    formData.append('alt_text', file.name.split('.')[0]);
+    formData.append('alt_text', file.name.replace(/\.[^.]+$/, ''));
 
     try {
       setLoading(true);
-      await apiFetch('/media/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      fetchMedia(selectedTarget);
-      fetchTargets(); // update counts
+      await apiFetch('/media/upload', { method: 'POST', body: formData });
+      await Promise.all([fetchMedia(selectedTarget), fetchTargets()]);
     } catch (err: any) {
       alert(err.message || '上傳失敗');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
+      setLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     if (!confirm('確定要刪除這張圖片嗎？')) return;
     try {
       await apiFetch(`/media/${id}`, { method: 'DELETE' });
-      fetchMedia(selectedTarget);
-      fetchTargets();
+      await Promise.all([fetchMedia(selectedTarget), fetchTargets()]);
     } catch (err: any) {
-      alert('刪除失敗');
+      alert(err.message || '刪除失敗');
     }
   };
 
-  const getTargetLabel = (slug: string) => {
-    const target = targets.find(t => t.slug === slug);
-    return target ? target.label_zh : slug;
-  };
+  const getTargetLabel = (targetId: string) => targets.find(t => t.target === targetId)?.label_zh || targetId;
+  const imageUrl = (url: string) => url.startsWith('http') ? url : `${API_ORIGIN}${url}`;
 
   return (
     <div className={styles.mediaContainer}>
@@ -100,11 +91,8 @@ export default function MediaPage() {
         <h3 style={{ marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>顯示位置</h3>
         <ul className={styles.targetList}>
           {targets.map(t => (
-            <li key={t.slug}>
-              <button 
-                className={`${styles.targetBtn} ${selectedTarget === t.slug ? styles.active : ''}`}
-                onClick={() => setSelectedTarget(t.slug)}
-              >
+            <li key={t.target}>
+              <button className={`${styles.targetBtn} ${selectedTarget === t.target ? styles.active : ''}`} onClick={() => setSelectedTarget(t.target)}>
                 {t.label_zh}
                 <span className={styles.countBadge}>{t.image_count}</span>
               </button>
@@ -116,17 +104,11 @@ export default function MediaPage() {
       <div className={styles.mainArea}>
         <div className={styles.header}>
           <h2>{getTargetLabel(selectedTarget)}</h2>
-          <button className="btn btn-primary" onClick={handleUploadClick}>
+          <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>
             <UploadCloud size={18} />
             上傳圖片
           </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            style={{ display: 'none' }} 
-            accept="image/jpeg, image/png, image/webp"
-          />
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/jpeg,image/png,image/webp" />
         </div>
 
         {loading ? (
@@ -138,34 +120,22 @@ export default function MediaPage() {
           </div>
         ) : (
           <div className={styles.grid}>
-            {media.map((item, index) => (
+            {media.map(item => (
               <div key={item.id} className={styles.imageCard}>
-                <img 
-                  src={`http://localhost:3333${item.file_url}`} 
-                  alt={item.alt_text} 
-                  className={styles.imagePreview} 
-                  onError={(e) => {
-                    // Fallback for docker environment vs local
-                    e.currentTarget.src = item.file_url.replace('/api/v1/media', 'http://api:3333/api/v1/media');
-                  }}
-                />
+                <img src={imageUrl(item.url)} alt={item.alt_text || item.filename_original} className={styles.imagePreview} />
                 <div className={styles.imageOverlay}>
-                  <button className={styles.iconBtn} title="拖曳排序 (未實作)">
+                  <button className={styles.iconBtn} title="排序功能會使用 API reorder，尚未接拖曳互動" type="button">
                     <GripHorizontal size={18} />
                   </button>
-                  <button 
-                    className={`${styles.iconBtn} ${styles.danger}`} 
-                    title="刪除"
-                    onClick={() => handleDelete(item.id)}
-                  >
+                  <button className={`${styles.iconBtn} ${styles.danger}`} title="刪除" type="button" onClick={() => handleDelete(item.id)}>
                     <Trash2 size={18} />
                   </button>
                 </div>
                 <div className={styles.imageMeta}>
-                  {item.alt_text || '無替代文字'}
+                  {item.alt_text || item.filename_original || '無替代文字'}
                   <br />
                   <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>
-                    {item.width}x{item.height} • {Math.round(item.file_size / 1024)} KB
+                    {Math.round((item.size_bytes || 0) / 1024)} KB
                   </span>
                 </div>
               </div>
@@ -174,16 +144,5 @@ export default function MediaPage() {
         )}
       </div>
     </div>
-  );
-}
-
-// Just for the empty state icon
-function ImageIcon(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-      <circle cx="9" cy="9" r="2"/>
-      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-    </svg>
   );
 }

@@ -132,11 +132,27 @@
 .dayCell {
   min-width: 80px;
   flex: 1;
+  border: 0;
   border-right: 1px solid var(--border-color);
   height: 60px;
   cursor: pointer;
   transition: background-color 0.2s;
   position: relative;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 0.25rem;
+  font: inherit;
+  overflow: hidden;
+}
+
+.dayCell span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .dayCell:hover {

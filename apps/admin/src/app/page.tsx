@@ -3,29 +3,31 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import styles from './dashboard.module.css';
-import { 
-  Users, 
-  DoorOpen, 
-  CalendarClock, 
+import {
+  DoorOpen,
+  CalendarClock,
   CircleDollarSign,
   AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
 interface DashboardStats {
-  today_check_in: number;
-  today_check_out: number;
+  today_check_ins: number;
+  today_check_outs: number;
+  current_occupancy: number;
+  total_rooms: number;
   occupancy_rate: number;
-  future_7d_bookings: number;
+  upcoming_bookings_7d: number;
   pending_bookings: number;
   monthly_revenue: number;
-  unhandled_webhooks: number;
+  unprocessed_webhooks: number;
 }
 
 interface RecentBooking {
-  id: string;
+  id: number;
   guest_name: string;
-  room_id: string;
+  room?: { name_zh: string };
+  room_id: number;
   check_in: string;
   check_out: string;
   status: string;
@@ -42,9 +44,9 @@ export default function Dashboard() {
       try {
         const [statsRes, bookingsRes] = await Promise.all([
           apiFetch('/dashboard/stats'),
-          apiFetch('/dashboard/recent-bookings')
+          apiFetch('/dashboard/recent-bookings?limit=8')
         ]);
-        
+
         if (statsRes?.data) setStats(statsRes.data);
         if (bookingsRes?.data) setRecentBookings(bookingsRes.data);
       } catch (err) {
@@ -59,11 +61,12 @@ export default function Dashboard() {
 
   const getStatusBadge = (status: string) => {
     const map: Record<string, { label: string, color: string }> = {
-      'pending': { label: '待確認', color: 'badge-amber' },
-      'confirmed': { label: '已確認', color: 'badge-green' },
-      'cancelled': { label: '已取消', color: 'badge-red' },
-      'checked_in': { label: '已入住', color: 'badge-blue' },
-      'checked_out': { label: '已退房', color: 'badge-gray' },
+      pending: { label: '待確認', color: 'badge-amber' },
+      confirmed: { label: '已確認', color: 'badge-green' },
+      cancelled: { label: '已取消', color: 'badge-red' },
+      checked_in: { label: '已入住', color: 'badge-blue' },
+      checked_out: { label: '已退房', color: 'badge-gray' },
+      no_show: { label: '未入住', color: 'badge-red' },
     };
     const s = map[status] || { label: status, color: 'badge-gray' };
     return <span className={`${styles.badge} ${styles[s.color]}`}>{s.label}</span>;
@@ -71,12 +74,12 @@ export default function Dashboard() {
 
   const getSourceBadge = (source: string) => {
     const map: Record<string, string> = {
-      'website': '官網',
-      'phone': '電話',
-      'line': 'LINE',
-      'ota': 'OTA平台',
-      'walk_in': '現場',
-      'admin': '後台新增',
+      website: '官網',
+      phone: '電話',
+      line: 'LINE',
+      ota: 'OTA平台',
+      walk_in: '現場',
+      admin: '後台新增',
     };
     return <span className={`${styles.badge} ${styles['badge-gray']}`}>{map[source] || source}</span>;
   };
@@ -92,10 +95,10 @@ export default function Dashboard() {
           </div>
           <div className={styles.statContent}>
             <h3>今日入住 / 退房</h3>
-            <p>{stats?.today_check_in || 0} / {stats?.today_check_out || 0}</p>
+            <p>{stats?.today_check_ins || 0} / {stats?.today_check_outs || 0}</p>
           </div>
         </div>
-        
+
         <div className={styles.statCard} style={{ borderLeftColor: stats?.pending_bookings ? 'var(--status-amber)' : 'var(--accent-gold)' }}>
           <div className={styles.statIcon} style={{ color: stats?.pending_bookings ? 'var(--status-amber)' : 'var(--accent-gold)', backgroundColor: stats?.pending_bookings ? 'rgba(245, 158, 11, 0.1)' : '' }}>
             <AlertCircle size={24} />
@@ -112,7 +115,7 @@ export default function Dashboard() {
           </div>
           <div className={styles.statContent}>
             <h3>未來7天訂單</h3>
-            <p>{stats?.future_7d_bookings || 0}</p>
+            <p>{stats?.upcoming_bookings_7d || 0}</p>
           </div>
         </div>
 
@@ -135,7 +138,7 @@ export default function Dashboard() {
               查看全部
             </Link>
           </div>
-          
+
           <div className={styles.tableContainer}>
             <table className={styles.table}>
               <thead>
@@ -152,7 +155,7 @@ export default function Dashboard() {
                   recentBookings.map(b => (
                     <tr key={b.id}>
                       <td>{b.guest_name}</td>
-                      <td>{b.room_id}</td>
+                      <td>{b.room?.name_zh || `房型 #${b.room_id}`}</td>
                       <td>{b.check_in} ~ {b.check_out}</td>
                       <td>{getStatusBadge(b.status)}</td>
                       <td>{getSourceBadge(b.source)}</td>

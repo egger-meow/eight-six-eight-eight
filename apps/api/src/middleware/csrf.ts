@@ -4,7 +4,7 @@ import { config } from '../lib/config';
 
 const { generateToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => getSecureSecret('CSRF_SECRET'),
-  cookieName: '__Host-8688_csrf', // Secure cookie prefix
+  cookieName: config.NODE_ENV === 'production' ? '__Host-8688_csrf' : '8688_csrf',
   cookieOptions: {
     httpOnly: true,
     sameSite: 'strict',

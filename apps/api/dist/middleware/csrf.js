@@ -6,7 +6,7 @@ const config_1 = require("../lib/config");
 const config_2 = require("../lib/config");
 const { generateToken, doubleCsrfProtection } = (0, csrf_csrf_1.doubleCsrf)({
     getSecret: () => (0, config_1.getSecureSecret)('CSRF_SECRET'),
-    cookieName: '__Host-8688_csrf', // Secure cookie prefix
+    cookieName: config_2.config.NODE_ENV === 'production' ? '__Host-8688_csrf' : '8688_csrf',
     cookieOptions: {
         httpOnly: true,
         sameSite: 'strict',

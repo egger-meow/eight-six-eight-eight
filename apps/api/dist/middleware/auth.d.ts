@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+export declare const SESSION_COOKIE_NAME: string;
 export interface AuthRequest extends Request {
     user?: {
         userId: number;

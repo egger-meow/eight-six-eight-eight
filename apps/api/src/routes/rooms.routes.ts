@@ -51,7 +51,7 @@ router.get('/', async (req, res, next) => {
       orderBy: { sortOrder: 'asc' }
     });
 
-    const roomSlugs = rooms.map(r => `room_${r.slug}`);
+    const roomSlugs = rooms.map((r: any) => `room_${r.slug}`);
     const allImages = await db.media.findMany({
       where: { target: { in: roomSlugs } },
       orderBy: { sortOrder: 'asc' }
@@ -66,7 +66,7 @@ router.get('/', async (req, res, next) => {
       imagesByRoom.get(slug)!.push(mapMediaToResponse(img));
     }
 
-    const mappedRooms = rooms.map(r => ({
+    const mappedRooms = rooms.map((r: any) => ({
       ...mapRoomToResponse(r),
       images: imagesByRoom.get(r.slug) || []
     }));

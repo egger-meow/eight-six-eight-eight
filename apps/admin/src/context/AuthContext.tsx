@@ -22,12 +22,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [csrf, setCsrf] = useState<string | null>(null);
 
   const refreshCsrf = async () => {
     try {
       const data = await apiFetch('/auth/csrf-token');
       if (data?.data?.csrf_token) {
         setCsrfToken(data.data.csrf_token);
+        setCsrf(data.data.csrf_token);
       }
     } catch (error) {
       console.error('Failed to fetch CSRF token:', error);
@@ -54,7 +56,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (username: string, password: string) => {
-    await refreshCsrf();
     const data = await apiFetch('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
@@ -62,6 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     if (data?.data?.user) {
       setUser(data.data.user);
+      if (data.data.csrf_token) {
+        setCsrfToken(data.data.csrf_token);
+        setCsrf(data.data.csrf_token);
+      }
     } else {
       throw new Error('Login failed');
     }
@@ -75,11 +80,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(null);
     setCsrfToken('');
+    setCsrf(null);
     window.location.href = '/login';
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshCsrf, csrfToken: getCsrfToken() }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshCsrf, csrfToken: csrf || getCsrfToken() }}>
       {children}
     </AuthContext.Provider>
   );

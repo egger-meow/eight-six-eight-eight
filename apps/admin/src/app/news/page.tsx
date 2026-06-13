@@ -10,20 +10,25 @@ export default function NewsPage() {
     id: '',
     title: '最新公告',
     content: '',
-    is_visible: true,
+    visible: true,
+    pinned: true,
+    published_at: new Date().toISOString().split('T')[0],
   });
 
   useEffect(() => {
     const fetchAnnouncement = async () => {
       try {
-        // Find the first pinned news or the latest one to act as the main announcement
-        const res = await apiFetch('/news?limit=1');
-        if (res?.data && res.data.length > 0) {
+        const res = await apiFetch('/news?per_page=20');
+        const items = res?.data || [];
+        const item = items.find((n: any) => n.pinned) || items[0];
+        if (item) {
           setAnnouncement({
-            id: res.data[0].id,
-            title: res.data[0].title,
-            content: res.data[0].content,
-            is_visible: res.data[0].is_visible,
+            id: String(item.id),
+            title: item.title,
+            content: item.content,
+            visible: item.visible,
+            pinned: item.pinned,
+            published_at: item.published_at || new Date().toISOString().split('T')[0],
           });
         }
       } catch (err) {
@@ -39,29 +44,25 @@ export default function NewsPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        title: announcement.title,
+        content: announcement.content,
+        visible: announcement.visible,
+        pinned: true,
+        published_at: announcement.published_at || null,
+      };
+
       if (announcement.id) {
         await apiFetch(`/news/${announcement.id}`, {
           method: 'PUT',
-          body: JSON.stringify({
-            title: announcement.title,
-            content: announcement.content,
-            is_visible: announcement.is_visible,
-          }),
+          body: JSON.stringify(payload),
         });
       } else {
         const res = await apiFetch('/news', {
           method: 'POST',
-          body: JSON.stringify({
-            title: announcement.title,
-            content: announcement.content,
-            is_visible: announcement.is_visible,
-            is_pinned: true,
-            published_at: new Date().toISOString()
-          }),
+          body: JSON.stringify(payload),
         });
-        if (res?.data?.id) {
-          setAnnouncement(prev => ({ ...prev, id: res.data.id }));
-        }
+        if (res?.data?.id) setAnnouncement(prev => ({ ...prev, id: String(res.data.id) }));
       }
       alert('公告已更新！');
     } catch (err: any) {
@@ -77,56 +78,32 @@ export default function NewsPage() {
     <div className="card" style={{ maxWidth: '800px' }}>
       <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)' }}>更新首頁公告</h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-        此處的內容將會顯示在官方網站的首頁「最新消息 / 公告」區塊。
+        此處會更新目前置頂公告。前台若要即時顯示，網站端也需要改成讀取 API。
       </p>
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label className="form-label">公告標題</label>
-          <input 
-            type="text" 
-            className="input-field" 
-            value={announcement.title}
-            onChange={(e) => setAnnouncement({...announcement, title: e.target.value})}
-            required
-            placeholder="例如：過年期間營業時間調整"
-          />
+          <input type="text" className="input-field" value={announcement.title} onChange={(e) => setAnnouncement({ ...announcement, title: e.target.value })} required />
         </div>
 
         <div className="form-group">
           <label className="form-label">公告內容</label>
-          <textarea 
-            className="input-field" 
-            value={announcement.content}
-            onChange={(e) => setAnnouncement({...announcement, content: e.target.value})}
-            rows={10}
-            required
-            placeholder="請輸入公告內容...支援基本換行"
-            style={{ resize: 'vertical' }}
-          />
+          <textarea className="input-field" value={announcement.content} onChange={(e) => setAnnouncement({ ...announcement, content: e.target.value })} rows={10} required style={{ resize: 'vertical' }} />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">發布日期</label>
+          <input type="date" className="input-field" value={announcement.published_at} onChange={(e) => setAnnouncement({ ...announcement, published_at: e.target.value })} />
         </div>
 
         <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
-          <input 
-            type="checkbox" 
-            id="is_visible"
-            checked={announcement.is_visible}
-            onChange={(e) => setAnnouncement({...announcement, is_visible: e.target.checked})}
-            style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--accent-gold)' }}
-          />
-          <label htmlFor="is_visible" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-            顯示於官方網站
-          </label>
+          <input type="checkbox" id="visible" checked={announcement.visible} onChange={(e) => setAnnouncement({ ...announcement, visible: e.target.checked })} style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--accent-gold)' }} />
+          <label htmlFor="visible" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>顯示於官方網站</label>
         </div>
 
         <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end' }}>
-          <button 
-            type="submit" 
-            className="btn btn-primary"
-            disabled={saving}
-          >
-            {saving ? '儲存中...' : '發布公告'}
-          </button>
+          <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? '儲存中...' : '發布公告'}</button>
         </div>
       </form>
     </div>

@@ -177,22 +177,22 @@ router.get('/calendar', requireAdmin, validateQuery(DateRangeQuerySchema), async
     }
 
     // Build the calendar rooms array
-    const roomsData = rooms.map(room => {
-      const roomBookings = bookings.filter(b => b.roomId === room.id);
-      const roomBlocks = blockedDates.filter(b => b.roomId === room.id || b.roomId === null);
+    const roomsData = rooms.map((room: any) => {
+      const roomBookings = bookings.filter((b: any) => b.roomId === room.id);
+      const roomBlocks = blockedDates.filter((b: any) => b.roomId === room.id || b.roomId === null);
 
       const days = datesList.map(dateStr => {
         const d = new Date(dateStr);
 
         // Find if blocked on this date
-        const block = roomBlocks.find(b => {
+        const block = roomBlocks.find((b: any) => {
           const start = new Date(b.startDate);
           const end = new Date(b.endDate);
           return d >= start && d <= end;
         });
 
         // Find if booked on this date (checkIn <= d < checkOut)
-        const booking = roomBookings.find(b => {
+        const booking = roomBookings.find((b: any) => {
           const start = new Date(b.checkIn);
           const end = new Date(b.checkOut);
           return d >= start && d < end;

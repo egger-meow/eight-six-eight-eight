@@ -93,7 +93,7 @@ router.get('/stats', requireAdmin, async (req, res, next) => {
     ]);
 
     const occupancyRate = totalRooms > 0 ? parseFloat((currentOccupancy / totalRooms).toFixed(2)) : 0;
-    const monthlyRevenue = monthlyBookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+    const monthlyRevenue = monthlyBookings.reduce((sum: number, b: any) => sum + (b.totalPrice || 0), 0);
 
     res.json({
       success: true,
@@ -171,19 +171,19 @@ router.get('/occupancy', requireAdmin, validateQuery(DateRangeQuerySchema), asyn
 
     const data: any[] = [];
     for (const room of rooms) {
-      const roomBookings = bookings.filter(b => b.roomId === room.id);
-      const roomBlocks = blockedDates.filter(b => b.roomId === room.id || b.roomId === null);
+      const roomBookings = bookings.filter((b: any) => b.roomId === room.id);
+      const roomBlocks = blockedDates.filter((b: any) => b.roomId === room.id || b.roomId === null);
 
       for (const dateStr of datesList) {
         const d = new Date(dateStr);
 
-        const isOccupied = roomBookings.some(b => {
+        const isOccupied = roomBookings.some((b: any) => {
           const start = new Date(b.checkIn);
           const end = new Date(b.checkOut);
           return d >= start && d < end;
         });
 
-        const isBlocked = roomBlocks.some(b => {
+        const isBlocked = roomBlocks.some((b: any) => {
           const start = new Date(b.startDate);
           const end = new Date(b.endDate);
           return d >= start && d <= end;

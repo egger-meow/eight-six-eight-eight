@@ -107,7 +107,7 @@ router.get('/targets', requireAdmin, async (req, res, next) => {
       { target: 'location', label_zh: '民宿位置', label_en: 'Location Page' },
       { target: 'gallery', label_zh: '相簿', label_en: 'General Gallery' },
       { target: 'brand', label_zh: '品牌標識', label_en: 'Brand Assets' },
-      ...rooms.map(r => ({
+      ...rooms.map((r: any) => ({
         target: `room_${r.slug}`,
         label_zh: `房型相簿 — ${r.nameZh}`,
         label_en: `Room Gallery — ${r.nameEn || r.slug}`
@@ -119,7 +119,7 @@ router.get('/targets', requireAdmin, async (req, res, next) => {
       _count: { id: true }
     });
 
-    const countsMap = new Map(counts.map(c => [c.target, c._count.id]));
+    const countsMap = new Map(counts.map((c: any) => [c.target, c._count.id]));
     const data = targets.map(t => ({
       ...t,
       image_count: countsMap.get(t.target) || 0

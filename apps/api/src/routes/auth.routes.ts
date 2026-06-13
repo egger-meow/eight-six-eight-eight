@@ -7,6 +7,7 @@ import { signToken, verifyToken } from '../lib/jwt';
 import { hashPassword, verifyPassword } from '../lib/password';
 import { config } from '../lib/config';
 import { db } from '@8688bnb/db';
+import { SESSION_COOKIE_NAME } from '../middleware/auth';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.post('/login', validate(LoginSchema), async (req, res, next) => {
     const payload = { userId: user.id, username: user.username };
     const token = signToken(payload);
 
-    res.cookie('__Host-8688_session', token, {
+    res.cookie(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
       secure: config.NODE_ENV === 'production',
       sameSite: 'strict',
@@ -54,7 +55,9 @@ router.post('/login', validate(LoginSchema), async (req, res, next) => {
 });
 
 router.post('/logout', requireAdmin, doubleCsrfProtection, (req, res) => {
-  res.clearCookie('__Host-8688_session');
+  res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
+  res.clearCookie('__Host-8688_session', { path: '/' });
+  res.clearCookie('8688_session', { path: '/' });
   res.json({ success: true, data: { message: '已成功登出' } });
 });
 
@@ -89,7 +92,9 @@ router.put('/password', requireAdmin, doubleCsrfProtection, validate(ChangePassw
     });
     
     // Invalidate session
-    res.clearCookie('__Host-8688_session');
+    res.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
+    res.clearCookie('__Host-8688_session', { path: '/' });
+    res.clearCookie('8688_session', { path: '/' });
     
     res.json({
       success: true,

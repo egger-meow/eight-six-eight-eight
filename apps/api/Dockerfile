@@ -27,7 +27,7 @@ COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/package-lock.json ./package-lock.json
 
 # Install ALL dependencies (including devDeps needed for tsc + prisma generate)
-RUN npm install --no-audit --no-fund
+RUN npm install --no-audit --no-fund --ignore-scripts
 
 # Copy the actual source files
 COPY --from=pruner /app/out/full/ .
@@ -35,7 +35,7 @@ COPY --from=pruner /app/out/full/ .
 ENV NODE_ENV=production
 
 # Generate the Prisma client from the @8688bnb/db schema
-RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
+RUN ./packages/db/node_modules/.bin/prisma generate --schema=packages/db/prisma/schema.prisma
 
 # Build the db package first (api depends on it), then the api
 RUN npx turbo run build --filter=@8688bnb/api
@@ -48,12 +48,12 @@ RUN apk add --no-cache libc6-compat python3 make g++
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/package-lock.json ./package-lock.json
 
-# Install production deps only
-RUN npm install --no-audit --no-fund --omit=dev
+# Install dependencies needed by Prisma postinstall/generate in the pruned workspace.
+RUN npm install --no-audit --no-fund --ignore-scripts
 
 # Re-generate Prisma client in the prod node_modules
 COPY --from=pruner /app/out/full/packages/db/prisma ./packages/db/prisma
-RUN npx prisma generate --schema=packages/db/prisma/schema.prisma
+RUN ./packages/db/node_modules/.bin/prisma generate --schema=packages/db/prisma/schema.prisma
 
 # ── Stage 4: Production runner (minimal image) ─────────────────────────────
 FROM node:22-alpine AS runner

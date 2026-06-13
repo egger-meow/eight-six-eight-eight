@@ -76,7 +76,7 @@ export default function BlockedDatesPage() {
             <tr style={{ borderBottom: '2px solid var(--border-color)', backgroundColor: 'rgba(0,0,0,0.02)' }}>
               <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 500 }}>日期範圍</th>
               <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 500 }}>原因</th>
-              <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 500 }}>建立者</th>
+              <th style={{ padding: '1rem', textAlign: 'left', color: 'var(--text-secondary)', fontWeight: 500 }}>範圍</th>
               <th style={{ padding: '1rem', textAlign: 'right', color: 'var(--text-secondary)', fontWeight: 500 }}>操作</th>
             </tr>
           </thead>
@@ -95,7 +95,7 @@ export default function BlockedDatesPage() {
                 <tr key={b.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '1rem', fontWeight: 500 }}>{b.start_date} ~ {b.end_date}</td>
                   <td style={{ padding: '1rem' }}>{b.reason}</td>
-                  <td style={{ padding: '1rem' }}>{b.created_by}</td>
+                  <td style={{ padding: '1rem' }}>{b.room_id ? `房型 #${b.room_id}` : '全部房間'}</td>
                   <td style={{ padding: '1rem', textAlign: 'right' }}>
                     <button 
                       className="btn btn-secondary" 

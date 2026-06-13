@@ -21,13 +21,13 @@ export declare const BlockedDateUpdateSchema: z.ZodObject<{
     end_date: z.ZodOptional<z.ZodString>;
     reason: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    reason?: string | undefined;
     room_id?: number | null | undefined;
+    reason?: string | undefined;
     start_date?: string | undefined;
     end_date?: string | undefined;
 }, {
-    reason?: string | undefined;
     room_id?: number | null | undefined;
+    reason?: string | undefined;
     start_date?: string | undefined;
     end_date?: string | undefined;
 }>;

@@ -9,6 +9,7 @@ const jwt_1 = require("../lib/jwt");
 const password_1 = require("../lib/password");
 const config_1 = require("../lib/config");
 const db_1 = require("@8688bnb/db");
+const auth_2 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.post('/login', (0, validate_1.validate)(auth_schema_1.LoginSchema), async (req, res, next) => {
     try {
@@ -29,7 +30,7 @@ router.post('/login', (0, validate_1.validate)(auth_schema_1.LoginSchema), async
         }
         const payload = { userId: user.id, username: user.username };
         const token = (0, jwt_1.signToken)(payload);
-        res.cookie('__Host-8688_session', token, {
+        res.cookie(auth_2.SESSION_COOKIE_NAME, token, {
             httpOnly: true,
             secure: config_1.config.NODE_ENV === 'production',
             sameSite: 'strict',
@@ -48,7 +49,9 @@ router.post('/login', (0, validate_1.validate)(auth_schema_1.LoginSchema), async
     }
 });
 router.post('/logout', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (req, res) => {
-    res.clearCookie('__Host-8688_session');
+    res.clearCookie(auth_2.SESSION_COOKIE_NAME, { path: '/' });
+    res.clearCookie('__Host-8688_session', { path: '/' });
+    res.clearCookie('8688_session', { path: '/' });
     res.json({ success: true, data: { message: '已成功登出' } });
 });
 router.get('/me', auth_1.requireAdmin, async (req, res, next) => {
@@ -79,7 +82,9 @@ router.put('/password', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (0, va
             data: { passwordHash: newPasswordHash }
         });
         // Invalidate session
-        res.clearCookie('__Host-8688_session');
+        res.clearCookie(auth_2.SESSION_COOKIE_NAME, { path: '/' });
+        res.clearCookie('__Host-8688_session', { path: '/' });
+        res.clearCookie('8688_session', { path: '/' });
         res.json({
             success: true,
             data: { message: '密碼已更新，請重新登入' }

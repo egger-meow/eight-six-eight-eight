@@ -152,16 +152,16 @@ router.get('/occupancy', auth_1.requireAdmin, (0, validate_1.validateQuery)(comm
         }
         const data = [];
         for (const room of rooms) {
-            const roomBookings = bookings.filter(b => b.roomId === room.id);
-            const roomBlocks = blockedDates.filter(b => b.roomId === room.id || b.roomId === null);
+            const roomBookings = bookings.filter((b) => b.roomId === room.id);
+            const roomBlocks = blockedDates.filter((b) => b.roomId === room.id || b.roomId === null);
             for (const dateStr of datesList) {
                 const d = new Date(dateStr);
-                const isOccupied = roomBookings.some(b => {
+                const isOccupied = roomBookings.some((b) => {
                     const start = new Date(b.checkIn);
                     const end = new Date(b.checkOut);
                     return d >= start && d < end;
                 });
-                const isBlocked = roomBlocks.some(b => {
+                const isBlocked = roomBlocks.some((b) => {
                     const start = new Date(b.startDate);
                     const end = new Date(b.endDate);
                     return d >= start && d <= end;

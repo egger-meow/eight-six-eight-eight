@@ -231,10 +231,10 @@ services:
   nginx-proxy-manager:    # Reverse Proxy GUI
   cloudflared:            # Cloudflare Tunnel
   website:                # Next.js 民宿網站
-
-  # 未來再加：
-  # postgres:             # 訂房資料庫
-  # redis:                # 快取
+  admin:                  # Next.js 後台
+  api:                    # Express REST API
+  postgres:               # 訂房資料庫
+  redis:                  # 快取
 ```
 
 **Nginx Proxy Manager 路由規劃：**
@@ -242,8 +242,8 @@ services:
 | 網域 | 指向 |
 |------|------|
 | `8688bnb.com` | website container |
-| `admin.8688bnb.com` | 後台 (Phase 2) |
-| `api.8688bnb.com` | API (Phase 2) |
+| `admin.8688bnb.com` | admin container |
+| `api.8688bnb.com` | api container |
 
 ---
 
@@ -262,7 +262,7 @@ services:
 
 ---
 
-## 6. Data Model (for future CMS / database)
+## 6. Data Model (CMS / database)
 
 ```mermaid
 erDiagram
@@ -499,16 +499,16 @@ Data:
 | 📞 聯絡 | LINE + 電話 + Email |
 | 🔒 部署 | Cloudflare Tunnel → NAS → Docker |
 
-### 未來擴充（Phase 2+）：全方位訂房與內容管理
+### 後續擴充：全方位訂房與內容管理
 
-在確保既有功能穩定運作、維持強健擴充性架構的前提下，我們將實作以下擴充：
+在既有 admin/API 基礎上，後續仍可持續擴充以下能力：
 
 | 項目 | 說明 |
 |------|------|
 | **訂房 API 與 UI/UX** | 建立完整的線上訂房流程，提供流暢的預約體驗與後端 API 支援。 |
 | **圖片與儲存管理** | 優化首頁 Gallery 等各頁面的圖片顯示，並建立完善的圖片儲存與管理機制。 |
-| **Admin 後台 (CMS)** | 老闆可登入管理網站內容，例如隨時更新**公告欄**。 |
-| **訂單行事曆 (Calendar)** | 後台提供視覺化行事曆，讓老闆一目了然每間房的入住與預訂狀況。 |
+| **Admin 後台 (CMS)** | 已可登入管理公告、房型、圖片、訂單與可訂狀態，後續可強化頁面內容編輯。 |
+| **訂單行事曆 (Calendar)** | 已有房型日期格狀檢視與列表檢視，後續可加強拖曳、匯出與篩選。 |
 | **OTA 平台同步 (Webhooks)**| 建立 Webhook 接收 Agoda、Booking.com 等平台的通知，自動同步房態與訂單。 |
 | **金流串接** | 綠界/LINE Pay 線上支付。 |
 | **LINE/Email 通知** | 新訂單自動通知老闆與旅客。 |

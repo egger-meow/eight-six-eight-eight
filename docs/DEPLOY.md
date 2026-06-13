@@ -45,8 +45,8 @@ NAS 192.168.1.128 — Docker
 - NAS **不需要** Port Forward / No port forwarding needed
 - SSL 由 Cloudflare 處理 / SSL handled by Cloudflare
 
-**進階架構 (Phase 2):**
-未來將會擴充 `admin` 後台和 `api` 服務，流量一樣會由 Cloudflare Tunnel 進入 NPM，再由 NPM 根據網域（如 `admin.8688bnb.com` 或 `api.8688bnb.com`）轉發給對應的容器。
+**後台與 API：**
+`admin` 後台和 `api` 服務已經定義在 `infra/docker-compose.yml`，流量一樣由 Cloudflare Tunnel 進入 NPM，再由 NPM 根據網域（`admin.8688bnb.com`、`api.8688bnb.com`）轉發給對應容器。
 
 ---
 
@@ -71,8 +71,8 @@ NAS 192.168.1.128 — Docker
 /volume1/docker/8688bnb/eight-six-eight-eight/  ← 專案根目錄 (Git Root)
 ├── apps/
 │   ├── website/                  ← Next.js 公開網站
-│   ├── admin/                    ← Next.js 後台 (Phase 2)
-│   └── api/                      ← NestJS (Phase 2)
+│   ├── admin/                    ← Next.js 後台
+│   └── api/                      ← Express REST API
 ├── packages/                     ← 共用套件 (UI, DB, Configs)
 ├── infra/                        ← ★ Docker 部署配置放置區
 │   └── docker-compose.yml        ← 主要 Docker 編排檔
@@ -127,7 +127,7 @@ POSTGRES_PASSWORD=yenfeng
 # 進入 infra 資料夾
 cd infra/
 
-# 建構映像檔並啟動所有容器 (包含 website, postgres, redis, npm, cloudflared)
+# 建構映像檔並啟動所有容器 (包含 website, admin, api, postgres, redis, npm, cloudflared)
 docker compose up -d --build
 
 # 查看啟動狀態
@@ -145,6 +145,8 @@ docker compose ps
 
 # 預期輸出範例：
 # 8688bnb-website    ... (healthy)
+# 8688bnb-admin      ... (running)
+# 8688bnb-api        ... (healthy)
 # 8688bnb-postgres   ... (healthy)
 # 8688bnb-redis      ... (healthy)
 # 8688bnb-npm        ... (healthy)
@@ -181,7 +183,7 @@ docker compose ps
 
 4. 點選 **Save**
 
-### 5.3 未來子網域（Phase 2+）
+### 5.3 子網域
 
 | 網域 | Forward Hostname | Forward Port | 用途 |
 |---|---|---|---|
@@ -260,14 +262,18 @@ docker compose stop                     # 只停止（不移除）
 docker compose ps                       # 查看容器狀態
 docker compose logs -f                  # 即時查看所有 log
 docker compose logs -f website          # 只看網站 log
+docker compose logs -f admin            # 只看後台 log
+docker compose logs -f api              # 只看 API log
 docker compose logs -f cloudflared      # 只看 tunnel log
 
 # ── 重啟 / Restart ──
 docker compose restart website          # 重啟網站容器
+docker compose restart admin api        # 重啟後台與 API
 docker compose restart                  # 重啟所有容器
 
 # ── 進入容器 / Enter container ──
 docker compose exec website sh          # 進入網站容器 shell
+docker compose exec api sh              # 進入 API 容器 shell
 docker compose exec nginx-proxy-manager bash  # 進入 NPM 容器
 
 # ── 清理 / Cleanup ──
@@ -328,18 +334,13 @@ deploy:
 
 ---
 
-## <a id="future"></a>10. 未來擴充 / Future Expansion
+## <a id="future"></a>10. 後續擴充 / Future Expansion
 
-Phase 2 `admin` 後台和 `api` 服務已經預先定義在 `infra/docker-compose.yml` 中（目前被註解掉）。
+`admin` 後台和 `api` 服務目前已可建構，部署後需要確認 NPM 與 Cloudflare Tunnel 已新增 `admin.8688bnb.com` 和 `api.8688bnb.com` 的路由。
 
-當需要啟用時：
-1. 將 `infra/docker-compose.yml` 裡面 `admin` 和 `api` 服務的註解取消。
-2. 執行 `docker compose up -d --build`。
-3. 在 NPM 新增對應的 Proxy Host（指向 `admin` 和 `api` 容器）。
+### 後續重點功能架構
 
-### 未來重點功能架構 (Phase 2+)
-
-1. **完整訂房系統 (API & UI/UX)**：優化網站前端預約體驗，搭配強健的後端 API (NestJS) 處理庫存扣留與訂單建立。
+1. **完整訂房系統 (API & UI/UX)**：優化網站前端預約體驗，搭配 API 處理庫存扣留與訂單建立。
 2. **圖片顯示與儲存管理**：優化網站各頁面（如首頁 Gallery、房型照片）的圖片顯示，並為每頁建立更佳的圖檔儲存與管理機制。
 3. **Admin 後台管理**：
    - **內容管理 (CMS)**：老闆可自行管理網站內容，例如首頁的**公告欄**。
