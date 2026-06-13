@@ -5,12 +5,12 @@ export declare const MediaUpdateSchema: z.ZodObject<{
     sort_order: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
     sort_order?: number | undefined;
-    alt_text?: string | undefined;
     target?: string | undefined;
+    alt_text?: string | undefined;
 }, {
     sort_order?: number | undefined;
-    alt_text?: string | undefined;
     target?: string | undefined;
+    alt_text?: string | undefined;
 }>;
 export declare const MediaReorderSchema: z.ZodObject<{
     image_ids: z.ZodArray<z.ZodNumber, "many">;

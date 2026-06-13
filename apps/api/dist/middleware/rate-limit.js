@@ -11,7 +11,10 @@ const config_1 = require("../lib/config");
 // Redis Client
 exports.redisClient = (0, redis_1.createClient)({ url: config_1.config.REDIS_URL });
 exports.redisClient.on('error', (err) => console.error('Redis Client Error', err));
-// We connect asynchronously in the main app startup
+// Connect immediately and save the promise
+const redisConnectPromise = exports.redisClient.connect().catch((err) => {
+    console.error('Failed to connect to Redis for Rate Limiting:', err);
+});
 // Common error handler for rate limits
 const handler = (req, res) => {
     res.status(429).json({
@@ -31,7 +34,10 @@ exports.authLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     handler,
     store: new rate_limit_redis_1.default({
-        sendCommand: (...args) => exports.redisClient.sendCommand(args),
+        sendCommand: async (...args) => {
+            await redisConnectPromise;
+            return exports.redisClient.sendCommand(args);
+        },
         prefix: 'rl:auth:'
     })
 });
@@ -43,7 +49,10 @@ exports.generalLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     handler,
     store: new rate_limit_redis_1.default({
-        sendCommand: (...args) => exports.redisClient.sendCommand(args),
+        sendCommand: async (...args) => {
+            await redisConnectPromise;
+            return exports.redisClient.sendCommand(args);
+        },
         prefix: 'rl:api:'
     })
 });
@@ -55,7 +64,10 @@ exports.publicLimiter = (0, express_rate_limit_1.default)({
     legacyHeaders: false,
     handler,
     store: new rate_limit_redis_1.default({
-        sendCommand: (...args) => exports.redisClient.sendCommand(args),
+        sendCommand: async (...args) => {
+            await redisConnectPromise;
+            return exports.redisClient.sendCommand(args);
+        },
         prefix: 'rl:pub:'
     })
 });

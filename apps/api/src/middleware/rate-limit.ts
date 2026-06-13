@@ -5,9 +5,9 @@ import { config } from '../lib/config';
 
 // Redis Client
 export const redisClient = createClient({ url: config.REDIS_URL });
-redisClient.on('error', (err) => console.error('Redis Client Error', err));
+redisClient.on('error', (err: any) => console.error('Redis Client Error', err));
 // Connect immediately and save the promise
-const redisConnectPromise = redisClient.connect().catch(err => {
+const redisConnectPromise = redisClient.connect().catch((err: any) => {
   console.error('Failed to connect to Redis for Rate Limiting:', err);
 });
 

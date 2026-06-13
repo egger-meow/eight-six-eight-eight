@@ -11,7 +11,11 @@
     "lint": "turbo run lint"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "turbo": "^2.1.2"
   },
-  "packageManager": "npm@10.9.3"
+  "packageManager": "npm@10.9.3",
+  "dependencies": {
+    "bcryptjs": "^3.0.3"
+  }
 }

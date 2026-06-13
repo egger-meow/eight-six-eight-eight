@@ -56,7 +56,18 @@ model Booking {
   updatedAt      DateTime @updatedAt
 
   room           Room     @relation(fields: [roomId], references: [id])
+  internalNotes  BookingNote[]
 }
+
+model BookingNote {
+  id        Int      @id @default(autoincrement())
+  bookingId Int
+  content   String
+  createdAt DateTime @default(now())
+
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
 
 model BlockedDate {
   id        Int      @id @default(autoincrement())

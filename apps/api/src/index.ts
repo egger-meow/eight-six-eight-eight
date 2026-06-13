@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { config } from './lib/config';
 import { redisClient, authLimiter, generalLimiter, publicLimiter } from './middleware/rate-limit';
+import { db } from '@8688bnb/db';
 import { errorHandler, notFoundHandler } from './middleware/error-handler';
 
 // Import routers
@@ -34,13 +35,21 @@ app.use(cookieParser());
 
 
 // ── Health Check (No rate limiting needed)
-app.get('/api/v1/health', (req, res) => {
+app.get('/api/v1/health', async (req, res) => {
+  let dbStatus = 'error';
+  try {
+    await db.$queryRaw`SELECT 1`;
+    dbStatus = 'ok';
+  } catch (e) {
+    dbStatus = 'error';
+  }
+
   res.json({
-    status: 'ok',
+    status: dbStatus === 'ok' ? 'ok' : 'error',
     version: '0.1.0',
     uptime_seconds: Math.floor(process.uptime()),
     checks: {
-      database: 'ok', // TODO: real check
+      database: dbStatus,
       redis: redisClient.isReady ? 'ok' : 'error'
     }
   });

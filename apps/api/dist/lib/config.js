@@ -43,7 +43,7 @@ const envSchema = zod_1.z.object({
     CORS_ORIGIN: zod_1.z.string().default('http://localhost:3000'),
     JWT_SECRET: zod_1.z.string().optional(),
     CSRF_SECRET: zod_1.z.string().optional(),
-    ADMIN_DEFAULT_PASSWORD: zod_1.z.string().min(8).default('8688bnb'),
+    ADMIN_DEFAULT_PASSWORD: zod_1.z.string().min(8).default('8688bnb!'),
     WEBHOOK_API_KEY: zod_1.z.string().optional(),
     REDIS_URL: zod_1.z.string().default('redis://localhost:6379'),
     DATABASE_URL: zod_1.z.string().url().optional(),

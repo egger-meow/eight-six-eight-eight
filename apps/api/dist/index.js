@@ -9,6 +9,7 @@ const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const config_1 = require("./lib/config");
 const rate_limit_1 = require("./middleware/rate-limit");
+const db_1 = require("@8688bnb/db");
 const error_handler_1 = require("./middleware/error-handler");
 // Import routers
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
@@ -31,18 +32,22 @@ app.use((0, cors_1.default)({
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, cookie_parser_1.default)());
-// Connect to Redis for Rate Limiting
-rate_limit_1.redisClient.connect().then(() => {
-    console.log('📦 Redis connected for Rate Limiting');
-}).catch(console.error);
 // ── Health Check (No rate limiting needed)
-app.get('/api/v1/health', (req, res) => {
+app.get('/api/v1/health', async (req, res) => {
+    let dbStatus = 'error';
+    try {
+        await db_1.db.$queryRaw `SELECT 1`;
+        dbStatus = 'ok';
+    }
+    catch (e) {
+        dbStatus = 'error';
+    }
     res.json({
-        status: 'ok',
+        status: dbStatus === 'ok' ? 'ok' : 'error',
         version: '0.1.0',
         uptime_seconds: Math.floor(process.uptime()),
         checks: {
-            database: 'ok', // TODO: real check
+            database: dbStatus,
             redis: rate_limit_1.redisClient.isReady ? 'ok' : 'error'
         }
     });
@@ -65,14 +70,18 @@ app.use('/api/v1/system', rate_limit_1.generalLimiter, system_routes_1.default);
 app.use(error_handler_1.notFoundHandler);
 app.use(error_handler_1.errorHandler);
 // Start server
-app.listen(config_1.config.API_PORT, '127.0.0.1', () => {
-    console.log(`🚀 API Server listening on http://127.0.0.1:${config_1.config.API_PORT}`);
-    console.log(`   Environment: ${config_1.config.NODE_ENV}`);
-});
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(config_1.config.API_PORT, HOST, () => {
+        console.log(`🚀 API Server listening on http://${HOST}:${config_1.config.API_PORT}`);
+        console.log(`   Environment: ${config_1.config.NODE_ENV}`);
+    });
+}
 // Graceful shutdown
 process.on('SIGTERM', async () => {
     console.log('SIGTERM signal received: closing HTTP server');
     await rate_limit_1.redisClient.quit();
     process.exit(0);
 });
+exports.default = app;
 //# sourceMappingURL=index.js.map

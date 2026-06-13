@@ -54,3 +54,31 @@ export function validateQuery(schema: ZodSchema) {
     }
   };
 }
+
+export function validateParams(schema: ZodSchema) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    try {
+      req.params = schema.parse(req.params);
+      next();
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const details = error.errors.map(err => ({
+          field: err.path.join('.'),
+          message: err.message
+        }));
+        
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: '路由參數驗證失敗',
+            message_en: 'Route params validation failed',
+            details
+          }
+        });
+      }
+      next(error);
+    }
+  };
+}
+

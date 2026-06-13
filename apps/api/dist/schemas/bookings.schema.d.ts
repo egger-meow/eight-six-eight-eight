@@ -15,8 +15,8 @@ export declare const BookingCreateSchema: z.ZodObject<{
     guest_name: string;
     guest_phone: string;
     guest_count: number;
-    guest_email?: string | undefined;
     notes?: string | undefined;
+    guest_email?: string | undefined;
 }, {
     room_id: number;
     check_in: string;
@@ -24,8 +24,8 @@ export declare const BookingCreateSchema: z.ZodObject<{
     guest_name: string;
     guest_phone: string;
     guest_count: number;
-    guest_email?: string | undefined;
     notes?: string | undefined;
+    guest_email?: string | undefined;
 }>;
 export declare const BookingUpdateSchema: z.ZodObject<{
     room_id: z.ZodOptional<z.ZodNumber>;
@@ -42,7 +42,9 @@ export declare const BookingUpdateSchema: z.ZodObject<{
     ota_platform: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     ota_booking_id: z.ZodNullable<z.ZodOptional<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
-    status?: "pending" | "confirmed" | "checked_in" | "checked_out" | "cancelled" | "no_show" | undefined;
+    status?: "cancelled" | "no_show" | "pending" | "confirmed" | "checked_in" | "checked_out" | undefined;
+    notes?: string | undefined;
+    source?: "website" | "phone" | "line" | "ota" | "walk_in" | "admin" | undefined;
     room_id?: number | undefined;
     check_in?: string | undefined;
     check_out?: string | undefined;
@@ -50,13 +52,13 @@ export declare const BookingUpdateSchema: z.ZodObject<{
     guest_phone?: string | undefined;
     guest_email?: string | undefined;
     guest_count?: number | undefined;
-    notes?: string | undefined;
     total_price?: number | undefined;
-    source?: "website" | "phone" | "line" | "ota" | "walk_in" | "admin" | undefined;
     ota_platform?: string | null | undefined;
     ota_booking_id?: string | null | undefined;
 }, {
-    status?: "pending" | "confirmed" | "checked_in" | "checked_out" | "cancelled" | "no_show" | undefined;
+    status?: "cancelled" | "no_show" | "pending" | "confirmed" | "checked_in" | "checked_out" | undefined;
+    notes?: string | undefined;
+    source?: "website" | "phone" | "line" | "ota" | "walk_in" | "admin" | undefined;
     room_id?: number | undefined;
     check_in?: string | undefined;
     check_out?: string | undefined;
@@ -64,9 +66,7 @@ export declare const BookingUpdateSchema: z.ZodObject<{
     guest_phone?: string | undefined;
     guest_email?: string | undefined;
     guest_count?: number | undefined;
-    notes?: string | undefined;
     total_price?: number | undefined;
-    source?: "website" | "phone" | "line" | "ota" | "walk_in" | "admin" | undefined;
     ota_platform?: string | null | undefined;
     ota_booking_id?: string | null | undefined;
 }>;
