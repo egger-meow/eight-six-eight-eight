@@ -1,0 +1,219 @@
+.calendarContainer {
+  background: var(--content-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.monthNav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.monthNav button {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.monthNav button:hover {
+  background: #f3f4f6;
+}
+
+.monthNav h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 150px;
+  text-align: center;
+}
+
+.legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.legendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.gridHeader {
+  display: flex;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.roomCellHeader {
+  min-width: 120px;
+  padding: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-right: 1px solid var(--border-color);
+  position: sticky;
+  left: 0;
+  background: var(--content-bg);
+  z-index: 2;
+}
+
+.dateCellHeader {
+  min-width: 80px;
+  flex: 1;
+  padding: 1rem 0;
+  text-align: center;
+  border-right: 1px solid var(--border-color);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dateCellHeader.weekend {
+  color: var(--status-red);
+}
+
+.gridRow {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.roomCell {
+  min-width: 120px;
+  padding: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-right: 1px solid var(--border-color);
+  position: sticky;
+  left: 0;
+  background: var(--content-bg);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+}
+
+.daysContainer {
+  display: flex;
+  flex: 1;
+  position: relative;
+}
+
+.dayCell {
+  min-width: 80px;
+  flex: 1;
+  border-right: 1px solid var(--border-color);
+  height: 60px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.dayCell:hover {
+  background-color: rgba(184, 156, 110, 0.05);
+}
+
+/* Booking Bar spanning across cells */
+.bookingBar {
+  position: absolute;
+  top: 10px;
+  height: 40px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  font-size: 0.875rem;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  z-index: 5;
+  transition: transform 0.2s;
+}
+
+.bookingBar:hover {
+  transform: translateY(-2px);
+  z-index: 10;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+}
+
+.status-confirmed { background-color: var(--status-green); }
+.status-pending { background-color: var(--status-amber); }
+.status-checked_in { background-color: var(--status-blue); }
+.status-blocked { 
+  background: repeating-linear-gradient(
+    45deg,
+    #9ca3af,
+    #9ca3af 10px,
+    #6b7280 10px,
+    #6b7280 20px
+  );
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  z-index: 20;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s;
+  margin-bottom: 5px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1f2937 transparent transparent transparent;
+}
+
+.bookingBar:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+}
