@@ -44,7 +44,7 @@ model Booking {
   checkOut       DateTime @db.Date
   guestName      String
   guestPhone     String
-  guestEmail     String?
+  guestLineId     String?
   guestCount     Int
   totalPrice     Int?
   status         String   @default("pending")

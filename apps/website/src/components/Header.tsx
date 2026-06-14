@@ -134,11 +134,9 @@ export default function Header() {
           ))}
         </ul>
         <Link
-          href="http://line.naver.jp/ti/p/~@gps2290j"
+          href="/booking"
           className={styles.drawerReserve}
           onClick={() => setMenuOpen(false)}
-          target="_blank"
-          rel="noopener noreferrer"
         >
           {t(nav.reserveBtn)}
         </Link>

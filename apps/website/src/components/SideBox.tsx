@@ -8,12 +8,7 @@ export default function SideBox() {
   return (
     <aside className="sideBox" aria-label="快速聯絡">
       <span className="sideBox-title">{t(sideBox.title)}</span>
-      <a
-        className="sideBox-btn"
-        href="http://line.naver.jp/ti/p/~@gps2290j"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <a className="sideBox-btn" href="/booking">
         {t(sideBox.reserve)}
       </a>
       <a className="sideBox-btn" href="mailto:86.88hello@gmail.com">

@@ -1,4 +1,4 @@
-export declare const redisClient: _RedisClientType<{
+export declare const redisClient: import("@redis/client").RedisClientType<{
     graph: {
         CONFIG_GET: typeof import("@redis/graph/dist/commands/CONFIG_GET");
         configGet: typeof import("@redis/graph/dist/commands/CONFIG_GET");
@@ -287,7 +287,7 @@ export declare const redisClient: _RedisClientType<{
         RESERVE: typeof import("@redis/bloom/dist/commands/top-k/RESERVE");
         reserve: typeof import("@redis/bloom/dist/commands/top-k/RESERVE");
     };
-} & M, F, S>;
+} & import("redis").RedisModules, import("redis").RedisFunctions, import("redis").RedisScripts>;
 export declare const authLimiter: import("express-rate-limit").RateLimitRequestHandler;
 export declare const generalLimiter: import("express-rate-limit").RateLimitRequestHandler;
 export declare const publicLimiter: import("express-rate-limit").RateLimitRequestHandler;

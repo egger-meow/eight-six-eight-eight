@@ -15,7 +15,7 @@ interface BookingFormState {
   check_out: string;
   guest_name: string;
   guest_phone: string;
-  guest_email: string;
+  guest_line_id: string;
   guest_count: string;
   total_price: string;
   status: string;
@@ -29,7 +29,7 @@ const emptyForm: BookingFormState = {
   check_out: '',
   guest_name: '',
   guest_phone: '',
-  guest_email: '',
+  guest_line_id: '',
   guest_count: '2',
   total_price: '',
   status: 'pending',
@@ -93,7 +93,7 @@ export default function BookingsPage() {
           check_out: b.check_out || '',
           guest_name: b.guest_name || '',
           guest_phone: b.guest_phone || '',
-          guest_email: b.guest_email || '',
+          guest_line_id: b.guest_line_id || '',
           guest_count: String(b.guest_count || 2),
           total_price: b.total_price ? String(b.total_price) : '',
           status: b.status || 'pending',
@@ -146,7 +146,7 @@ export default function BookingsPage() {
             check_out: form.check_out,
             guest_name: form.guest_name,
             guest_phone: form.guest_phone,
-            guest_email: form.guest_email,
+            guest_line_id: form.guest_line_id,
             guest_count: Number(form.guest_count),
             total_price: form.total_price ? Number(form.total_price) : undefined,
             status: form.status,
@@ -170,7 +170,7 @@ export default function BookingsPage() {
             check_out: form.check_out,
             guest_name: form.guest_name,
             guest_phone: form.guest_phone,
-            guest_email: form.guest_email,
+            guest_line_id: form.guest_line_id,
             guest_count: Number(form.guest_count),
             notes: form.notes,
           }),
@@ -264,8 +264,8 @@ export default function BookingsPage() {
                   <input className="input-field" value={form.guest_phone} onChange={(e) => setForm({ ...form, guest_phone: e.target.value })} required />
                 </label>
                 <label className="form-group">
-                  <span className="form-label">Email</span>
-                  <input type="email" className="input-field" value={form.guest_email} onChange={(e) => setForm({ ...form, guest_email: e.target.value })} />
+                  <span className="form-label">LINE ID</span>
+                  <input className="input-field" value={form.guest_line_id} onChange={(e) => setForm({ ...form, guest_line_id: e.target.value })} />
                 </label>
                 <label className="form-group">
                   <span className="form-label">人數</span>

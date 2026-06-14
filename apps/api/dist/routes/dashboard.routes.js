@@ -24,7 +24,7 @@ function mapBookingToResponse(b) {
         check_out: b.checkOut.toISOString().split('T')[0],
         guest_name: b.guestName,
         guest_phone: b.guestPhone,
-        guest_email: b.guestEmail,
+        guest_line_id: b.guestLineId,
         guest_count: b.guestCount,
         total_price: b.totalPrice,
         status: b.status,

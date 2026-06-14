@@ -332,11 +332,10 @@ components:
         guest_phone:
           type: string
           example: '0912-345-678'
-        guest_email:
+        guest_line_id:
           type: string
-          format: email
           nullable: true
-          example: guest@example.com
+          example: '@gps2290j'
         guest_count:
           type: integer
           minimum: 1
@@ -406,9 +405,8 @@ components:
           minLength: 1
           maxLength: 30
           example: '0912-345-678'
-        guest_email:
+        guest_line_id:
           type: string
-          format: email
           maxLength: 255
         guest_count:
           type: integer
@@ -439,9 +437,8 @@ components:
         guest_phone:
           type: string
           maxLength: 30
-        guest_email:
+        guest_line_id:
           type: string
-          format: email
           maxLength: 255
         guest_count:
           type: integer

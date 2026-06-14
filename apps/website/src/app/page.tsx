@@ -103,14 +103,9 @@ function HeroSlider() {
           <Link href="/rooms" className="btn" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.6)' }}>
             <span>{t(hero.ctaRooms)}</span>
           </Link>
-          <a
-            href="http://line.naver.jp/ti/p/~@gps2290j"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-solid"
-          >
+          <Link href="/booking" className="btn btn-solid">
             <span>{t(hero.ctaReserve)}</span>
-          </a>
+          </Link>
         </div>
       </div>
 

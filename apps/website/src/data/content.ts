@@ -16,6 +16,7 @@ export const nav = {
     { href: '/rooms',        zh: '客房介紹', en: 'Rooms'         },
     { href: '/booking-info', zh: '訂房資訊', en: 'Booking Info'  },
     { href: '/location',     zh: '民宿位置', en: 'Location'      },
+    { href: '/booking',      zh: '預約訂房', en: 'Reservation'   },
     {
       href: 'http://line.naver.jp/ti/p/~@gps2290j',
       zh: 'LINE 訂房',
@@ -258,6 +259,65 @@ export const roomsPage = {
   capacity:   { zh: '人', en: ' guests' },
   detailBtn:  { zh: '查看詳情', en: 'View Details' },
   bookBtn:    { zh: '立即預訂', en: 'Reserve'       },
+} as const;
+
+/* ────────────────────────────────────────────────
+   BOOKING PAGE
+──────────────────────────────────────────────── */
+export const bookingPage = {
+  metaTitle: { zh: '預約訂房｜86.88民宿', en: 'Reservation | 86.88 B&B' },
+  label: { zh: 'RESERVATION', en: 'RESERVATION' },
+  h1: { zh: '預約訂房', en: 'Reservation' },
+  subtitle: {
+    zh: '送出預約後由民宿主人確認房況與付款細節',
+    en: 'Submit a request and the host will confirm availability and payment details.',
+  },
+  unavailableNotice: {
+    zh: '線上空房查詢與送出暫時無法使用。您仍可填寫資料後使用 LINE 聯繫民宿主人。',
+    en: 'Online availability and submission are temporarily unavailable. You can still prepare the details and contact the host via LINE.',
+  },
+  sections: {
+    dates: { zh: '選擇日期', en: 'Dates' },
+    room: { zh: '選擇房型', en: 'Room Type' },
+    guest: { zh: '入住資料', en: 'Guest Details' },
+    notes: { zh: '備註', en: 'Notes' },
+  },
+  fields: {
+    checkIn: { zh: '入住日期', en: 'Check-in' },
+    checkOut: { zh: '退房日期', en: 'Check-out' },
+    guestCount: { zh: '入住人數', en: 'Guests' },
+    name: { zh: '姓名', en: 'Name' },
+    phone: { zh: '電話', en: 'Phone' },
+    lineId: { zh: 'LINE ID（選填）', en: 'LINE ID (optional)' },
+  },
+  placeholders: {
+    notes: { zh: '抵達時間、特殊需求或其他想先告知的事項', en: 'Arrival time, special requests, or anything else we should know' },
+  },
+  summary: {
+    title: { zh: '訂房摘要', en: 'Reservation Summary' },
+    nights: { zh: '晚數', en: 'Nights' },
+    room: { zh: '房型', en: 'Room' },
+    guests: { zh: '人數', en: 'Guests' },
+    notSelected: { zh: '尚未選擇', en: 'Not selected' },
+    price: { zh: '預估總價', en: 'Estimated Total' },
+    priceNote: { zh: '實際金額與付款方式以民宿主人確認為準', en: 'Final price and payment method are confirmed by the host.' },
+  },
+  actions: {
+    submit: { zh: '送出線上預約', en: 'Submit Reservation' },
+    submitting: { zh: '送出中...', en: 'Submitting...' },
+    line: { zh: '使用 LINE 聯繫確認', en: 'Confirm via LINE' },
+  },
+  messages: {
+    selectRoom: { zh: '請選擇房型。', en: 'Please select a room type.' },
+    invalidDates: { zh: '退房日期必須晚於入住日期。', en: 'Check-out must be later than check-in.' },
+    capacity: { zh: '此房型最多可入住', en: 'This room can host up to' },
+    capacitySuffix: { zh: '人，請調整人數或選擇其他房型。', en: ' guests. Please adjust the guest count or choose another room.' },
+    requiredContact: { zh: '請填寫姓名與電話，方便民宿主人確認訂房。', en: 'Please enter your name and phone number so the host can confirm the reservation.' },
+    apiUnavailable: { zh: '線上空房查詢與送出暫時無法使用，請先使用 LINE 聯繫民宿主人。', en: 'Online availability and submission are temporarily unavailable. Please contact the host via LINE.' },
+    unavailable: { zh: '此時段目前無法預約，請更換日期或透過 LINE 詢問其他安排。', en: 'This date range is unavailable. Please choose other dates or ask via LINE.' },
+    success: { zh: '已送出預約，狀態為待確認。請透過 LINE 補充付款或抵達時間等細節。', en: 'Reservation submitted and pending confirmation. Please use LINE for payment or arrival details.' },
+    failure: { zh: '訂房送出失敗，請稍後再試或使用 LINE 聯繫。', en: 'Reservation failed. Please try again later or contact us via LINE.' },
+  },
 } as const;
 
 /* ────────────────────────────────────────────────

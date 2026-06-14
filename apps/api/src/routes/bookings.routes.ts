@@ -26,7 +26,7 @@ function mapBookingToResponse(b: any) {
     check_out: b.checkOut.toISOString().split('T')[0],
     guest_name: b.guestName,
     guest_phone: b.guestPhone,
-    guest_email: b.guestEmail,
+    guest_line_id: b.guestLineId,
     guest_count: b.guestCount,
     total_price: b.totalPrice,
     status: b.status,
@@ -145,7 +145,7 @@ router.post('/', validate(BookingCreateSchema), async (req, res, next) => {
         checkOut: checkOutDate,
         guestName: data.guest_name,
         guestPhone: data.guest_phone,
-        guestEmail: data.guest_email || null,
+        guestLineId: data.guest_line_id || null,
         guestCount: data.guest_count,
         notes: data.notes || null,
         totalPrice,
@@ -313,7 +313,7 @@ router.put('/:id', requireAdmin, doubleCsrfProtection, validateParams(IdParamSch
     if (data.check_out !== undefined) updateData.checkOut = new Date(data.check_out);
     if (data.guest_name !== undefined) updateData.guestName = data.guest_name;
     if (data.guest_phone !== undefined) updateData.guestPhone = data.guest_phone;
-    if (data.guest_email !== undefined) updateData.guestEmail = data.guest_email || null;
+    if (data.guest_line_id !== undefined) updateData.guestLineId = data.guest_line_id || null;
     if (data.guest_count !== undefined) updateData.guestCount = data.guest_count;
     if (data.total_price !== undefined) updateData.totalPrice = data.total_price;
     if (data.status !== undefined) updateData.status = data.status;

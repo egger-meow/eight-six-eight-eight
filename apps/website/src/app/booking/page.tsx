@@ -1,8 +1,11 @@
 'use client';
 
 import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import { checkAvailability, createBooking, getRooms, hasWebsiteApi, type BookingResult, type WebsiteRoom } from '@/lib/api';
+import { useLang } from '@/context/LanguageContext';
+import { bookingPage } from '@/data/content';
+import { checkAvailability, createBooking, getRooms, hasWebsiteApi, mediaUrl, type BookingResult, type WebsiteRoom } from '@/lib/api';
 import styles from './booking.module.css';
 
 const lineBaseUrl = 'https://line.me/R/oaMessage/@gps2290j/';
@@ -14,7 +17,7 @@ type FormState = {
   guestCount: number;
   guestName: string;
   guestPhone: string;
-  guestEmail: string;
+  guestLineId: string;
   notes: string;
 };
 
@@ -25,7 +28,7 @@ const initialState: FormState = {
   guestCount: 2,
   guestName: '',
   guestPhone: '',
-  guestEmail: '',
+  guestLineId: '',
   notes: '',
 };
 
@@ -34,6 +37,21 @@ function nightsBetween(checkIn: string, checkOut: string) {
   const start = new Date(`${checkIn}T00:00:00`);
   const end = new Date(`${checkOut}T00:00:00`);
   return Math.round((end.getTime() - start.getTime()) / 86400000);
+}
+
+function nextDate(dateString: string) {
+  if (!dateString) return '';
+  const date = new Date(dateString + 'T00:00:00');
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().split('T')[0];
+}
+
+function todayString() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
 }
 
 function localEstimate(room: WebsiteRoom | undefined, checkIn: string, checkOut: string) {
@@ -59,7 +77,7 @@ function lineHref(room: WebsiteRoom | undefined, form: FormState, totalPrice?: n
     `人數：${form.guestCount}人`,
     form.guestName ? `姓名：${form.guestName}` : null,
     form.guestPhone ? `電話：${form.guestPhone}` : null,
-    form.guestEmail ? `Email：${form.guestEmail}` : null,
+    form.guestLineId ? `LINE ID：${form.guestLineId}` : null,
     totalPrice ? `預估金額：NT$ ${totalPrice.toLocaleString()}` : null,
     form.notes ? `備註：${form.notes}` : null,
     '請協助確認是否可入住，謝謝。',
@@ -69,6 +87,7 @@ function lineHref(room: WebsiteRoom | undefined, form: FormState, totalPrice?: n
 }
 
 function BookingForm() {
+  const { t } = useLang();
   const searchParams = useSearchParams();
   const initialRoom = searchParams.get('room') || '';
   const [rooms, setRooms] = useState<WebsiteRoom[]>([]);
@@ -77,6 +96,7 @@ function BookingForm() {
   const [status, setStatus] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<BookingResult | null>(null);
+  const today = useMemo(() => todayString(), []);
 
   useEffect(() => {
     let mounted = true;
@@ -84,8 +104,9 @@ function BookingForm() {
       if (!mounted) return;
       setRooms(rooms.filter((room) => room.available !== false));
       setApiAvailable(fromApi && hasWebsiteApi);
-      if (!initialRoom && rooms[0]) {
-        setForm((current) => ({ ...current, roomSlug: rooms[0].slug }));
+      const availableRooms = rooms.filter((room) => room.available !== false);
+      if (!initialRoom && availableRooms[0]) {
+        setForm((current) => ({ ...current, roomSlug: availableRooms[0].slug }));
       }
     });
     return () => { mounted = false; };
@@ -102,29 +123,46 @@ function BookingForm() {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateCheckIn(value: string) {
+    setForm((current) => ({
+      ...current,
+      checkIn: value,
+      checkOut: current.checkOut && current.checkOut > value ? current.checkOut : nextDate(value),
+    }));
+  }
+
+  function updateRoomSlug(value: string) {
+    const selectedRoom = rooms.find((item) => item.slug === value);
+    setForm((current) => ({
+      ...current,
+      roomSlug: value,
+      guestCount: selectedRoom ? Math.min(current.guestCount, selectedRoom.capacity) : current.guestCount,
+    }));
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setStatus('');
     setSuccess(null);
 
     if (!room) {
-      setStatus('請選擇房型。');
+      setStatus(t(bookingPage.messages.selectRoom));
       return;
     }
     if (nightCount <= 0) {
-      setStatus('退房日期必須晚於入住日期。');
+      setStatus(t(bookingPage.messages.invalidDates));
       return;
     }
     if (form.guestCount > room.capacity) {
-      setStatus(`此房型最多可入住 ${room.capacity} 人，請調整人數或選擇其他房型。`);
+      setStatus(`${t(bookingPage.messages.capacity)} ${room.capacity}${t(bookingPage.messages.capacitySuffix)}`);
       return;
     }
     if (!form.guestName.trim() || !form.guestPhone.trim()) {
-      setStatus('請填寫姓名與電話，方便民宿主人確認訂房。');
+      setStatus(t(bookingPage.messages.requiredContact));
       return;
     }
     if (!apiAvailable || typeof room.id !== 'number') {
-      setStatus('線上空房查詢與送出暫時無法使用，請先使用 LINE 聯繫民宿主人。');
+      setStatus(t(bookingPage.messages.apiUnavailable));
       return;
     }
 
@@ -132,7 +170,7 @@ function BookingForm() {
     try {
       const availability = await checkAvailability(room.slug, form.checkIn, form.checkOut);
       if (!availability.available) {
-        setStatus('此時段目前無法預約，請更換日期或透過 LINE 詢問其他安排。');
+        setStatus(t(bookingPage.messages.unavailable));
         return;
       }
 
@@ -142,15 +180,15 @@ function BookingForm() {
         check_out: form.checkOut,
         guest_name: form.guestName.trim(),
         guest_phone: form.guestPhone.trim(),
-        guest_email: form.guestEmail.trim(),
+        guest_line_id: form.guestLineId.trim(),
         guest_count: form.guestCount,
         notes: form.notes.trim(),
       });
       setSuccess(booking);
-      setStatus('已送出預約，狀態為待確認。請透過 LINE 補充付款或抵達時間等細節。');
+      setStatus(t(bookingPage.messages.success));
     } catch (error) {
       const message = error instanceof Error ? error.message : '訂房送出失敗';
-      setStatus(message || '訂房送出失敗，請稍後再試或使用 LINE 聯繫。');
+      setStatus(message || t(bookingPage.messages.failure));
     } finally {
       setSubmitting(false);
     }
@@ -160,30 +198,32 @@ function BookingForm() {
     <form className={styles.bookingForm} onSubmit={handleSubmit}>
       {!apiAvailable && (
         <div className={styles.notice}>
-          線上空房查詢與送出暫時無法使用。您仍可填寫資料後使用 LINE 聯繫民宿主人。
+          {t(bookingPage.unavailableNotice)}
         </div>
       )}
 
       <div className={styles.formGroup}>
-        <h2 className={styles.formLabel}>選擇日期</h2>
+        <h2 className={styles.formLabel}>{t(bookingPage.sections.dates)}</h2>
         <div className={styles.inputGrid}>
           <label>
-            <span>入住日期</span>
+            <span>{t(bookingPage.fields.checkIn)}</span>
             <input
               type="date"
               className={styles.formControl}
               value={form.checkIn}
-              onChange={(event) => update('checkIn', event.target.value)}
+              onChange={(event) => updateCheckIn(event.target.value)}
+              min={today}
               required
             />
           </label>
           <label>
-            <span>退房日期</span>
+            <span>{t(bookingPage.fields.checkOut)}</span>
             <input
               type="date"
               className={styles.formControl}
               value={form.checkOut}
               onChange={(event) => update('checkOut', event.target.value)}
+              min={form.checkIn ? nextDate(form.checkIn) : today}
               required
             />
           </label>
@@ -191,15 +231,27 @@ function BookingForm() {
       </div>
 
       <div className={styles.formGroup}>
-        <h2 className={styles.formLabel}>選擇房型</h2>
+        <h2 className={styles.formLabel}>{t(bookingPage.sections.room)}</h2>
         <div className={styles.roomSelectGrid}>
           {rooms.map((item) => (
             <button
               key={item.slug}
               type="button"
               className={`${styles.roomCard} ${form.roomSlug === item.slug ? styles.selected : ''}`}
-              onClick={() => update('roomSlug', item.slug)}
+              onClick={() => updateRoomSlug(item.slug)}
+              aria-pressed={form.roomSlug === item.slug}
             >
+              <span className={styles.roomPreview} aria-hidden="true">
+                {item.images[0]?.url && (
+                  <Image
+                    src={mediaUrl(item.images[0].url)}
+                    alt=""
+                    fill
+                    sizes="(max-width: 768px) 80vw, 220px"
+                    style={{ objectFit: 'cover' }}
+                  />
+                )}
+              </span>
               <span className={styles.roomName}>{item.name_zh}</span>
               <span className={styles.roomCapacity}>可住 {item.capacity} 人</span>
             </button>
@@ -208,22 +260,22 @@ function BookingForm() {
       </div>
 
       <div className={styles.formGroup}>
-        <h2 className={styles.formLabel}>入住資料</h2>
+        <h2 className={styles.formLabel}>{t(bookingPage.sections.guest)}</h2>
         <div className={styles.inputGrid}>
           <label>
-            <span>入住人數</span>
+            <span>{t(bookingPage.fields.guestCount)}</span>
             <input
               type="number"
               min="1"
-              max="10"
+              max={room?.capacity || 10}
               className={styles.formControl}
               value={form.guestCount}
-              onChange={(event) => update('guestCount', Number(event.target.value))}
+              onChange={(event) => update('guestCount', Math.min(Number(event.target.value), room?.capacity || 10))}
               required
             />
           </label>
           <label>
-            <span>姓名</span>
+            <span>{t(bookingPage.fields.name)}</span>
             <input
               className={styles.formControl}
               value={form.guestName}
@@ -232,7 +284,7 @@ function BookingForm() {
             />
           </label>
           <label>
-            <span>電話</span>
+            <span>{t(bookingPage.fields.phone)}</span>
             <input
               className={styles.formControl}
               value={form.guestPhone}
@@ -241,12 +293,11 @@ function BookingForm() {
             />
           </label>
           <label>
-            <span>Email</span>
+            <span>{t(bookingPage.fields.lineId)}</span>
             <input
-              type="email"
               className={styles.formControl}
-              value={form.guestEmail}
-              onChange={(event) => update('guestEmail', event.target.value)}
+              value={form.guestLineId}
+              onChange={(event) => update('guestLineId', event.target.value)}
             />
           </label>
         </div>
@@ -254,27 +305,27 @@ function BookingForm() {
 
       <div className={styles.formGroup}>
         <label>
-          <span className={styles.formLabel}>備註</span>
+          <span className={styles.formLabel}>{t(bookingPage.sections.notes)}</span>
           <textarea
             className={styles.formControl}
             rows={4}
             value={form.notes}
             onChange={(event) => update('notes', event.target.value)}
-            placeholder="抵達時間、特殊需求或其他想先告知的事項"
+            placeholder={t(bookingPage.placeholders.notes)}
           />
         </label>
       </div>
 
       <div className={styles.summary}>
-        <h3 className={styles.summaryTitle}>訂房摘要</h3>
-        <div className={styles.summaryRow}><span>入住日期</span><span>{form.checkIn || '尚未選擇'}</span></div>
-        <div className={styles.summaryRow}><span>退房日期</span><span>{form.checkOut || '尚未選擇'}</span></div>
-        <div className={styles.summaryRow}><span>晚數</span><span>{nightCount > 0 ? `${nightCount} 晚` : '尚未選擇'}</span></div>
-        <div className={styles.summaryRow}><span>房型</span><span>{room?.name_zh || '尚未選擇'}</span></div>
-        <div className={styles.summaryRow}><span>人數</span><span>{form.guestCount} 人</span></div>
+        <h3 className={styles.summaryTitle}>{t(bookingPage.summary.title)}</h3>
+        <div className={styles.summaryRow}><span>{t(bookingPage.fields.checkIn)}</span><span>{form.checkIn || t(bookingPage.summary.notSelected)}</span></div>
+        <div className={styles.summaryRow}><span>{t(bookingPage.fields.checkOut)}</span><span>{form.checkOut || t(bookingPage.summary.notSelected)}</span></div>
+        <div className={styles.summaryRow}><span>{t(bookingPage.summary.nights)}</span><span>{nightCount > 0 ? String(nightCount) + ' 晚' : t(bookingPage.summary.notSelected)}</span></div>
+        <div className={styles.summaryRow}><span>{t(bookingPage.summary.room)}</span><span>{room?.name_zh || t(bookingPage.summary.notSelected)}</span></div>
+        <div className={styles.summaryRow}><span>{t(bookingPage.summary.guests)}</span><span>{form.guestCount} 人</span></div>
         <div className={styles.totalPrice}>
-          預估總價：NT$ {(success?.total_price ?? estimatedPrice).toLocaleString()}
-          <p>實際金額與付款方式以民宿主人確認為準</p>
+          {t(bookingPage.summary.price)}：NT$ {(success?.total_price ?? estimatedPrice).toLocaleString()}
+          <p>{t(bookingPage.summary.priceNote)}</p>
         </div>
       </div>
 
@@ -282,7 +333,7 @@ function BookingForm() {
 
       <div className={styles.actions}>
         <button className={`btn ${styles.submitBtn}`} type="submit" disabled={submitting || !apiAvailable}>
-          {submitting ? '送出中...' : '送出線上預約'}
+          {submitting ? t(bookingPage.actions.submitting) : t(bookingPage.actions.submit)}
         </button>
         <a
           className={`btn ${styles.lineBtn}`}
@@ -290,7 +341,7 @@ function BookingForm() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          使用 LINE 聯繫確認
+          {t(bookingPage.actions.line)}
         </a>
       </div>
     </form>
@@ -298,18 +349,24 @@ function BookingForm() {
 }
 
 export default function Booking() {
+  const { t } = useLang();
+
   return (
     <>
-      <div className={styles.header}>
-        <div className="container">
-          <h1>預約訂房</h1>
-          <p>RESERVATION FORM</p>
+      <div className={styles.subPage}>
+        <div className={styles.pageHeader}>
+          <div className="container">
+            <span className="section-label">{t(bookingPage.label)}</span>
+            <h1 className={styles.title}>{t(bookingPage.h1)}</h1>
+            <span className="gold-line center" />
+            <p className={styles.subtitle}>{t(bookingPage.subtitle)}</p>
+          </div>
         </div>
       </div>
 
       <section className={styles.section}>
         <div className="container" style={{ maxWidth: '900px' }}>
-          <Suspense fallback={<div className={styles.bookingForm}>載入訂房表單...</div>}>
+          <Suspense fallback={<div className={styles.bookingForm}>{t({ zh: '載入訂房表單...', en: 'Loading reservation form...' })}</div>}>
             <BookingForm />
           </Suspense>
         </div>

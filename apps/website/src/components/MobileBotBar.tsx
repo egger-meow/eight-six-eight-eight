@@ -30,9 +30,7 @@ export default function MobileBotBar() {
           <i className="fas fa-phone-square" />
         </a>
         <a
-          href="http://line.naver.jp/ti/p/~@gps2290j"
-          target="_blank"
-          rel="noopener noreferrer"
+          href="/booking"
           className="botBar-btn reserve"
           aria-label="立即預訂"
         >

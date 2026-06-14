@@ -49,7 +49,7 @@ export type BookingPayload = {
   check_out: string;
   guest_name: string;
   guest_phone: string;
-  guest_email?: string;
+  guest_line_id?: string;
   guest_count: number;
   notes?: string;
 };
