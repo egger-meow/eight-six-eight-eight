@@ -20,7 +20,7 @@ RUN turbo prune @8688bnb/api --docker
 # ── Stage 2: Install & Build ────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
 
 # Copy pruned package.json files first (better layer caching)
 COPY --from=pruner /app/out/json/ .
@@ -43,7 +43,7 @@ RUN npx turbo run build --filter=@8688bnb/api
 # ── Stage 3: Production dependencies only ───────────────────────────────────
 FROM node:22-alpine AS deps
 WORKDIR /app
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apk add --no-cache libc6-compat python3 make g++ openssl
 
 COPY --from=pruner /app/out/json/ .
 COPY --from=pruner /app/out/package-lock.json ./package-lock.json
@@ -58,6 +58,7 @@ RUN ./packages/db/node_modules/.bin/prisma generate --schema=packages/db/prisma/
 # ── Stage 4: Production runner (minimal image) ─────────────────────────────
 FROM node:22-alpine AS runner
 WORKDIR /app
+RUN apk add --no-cache libc6-compat openssl
 
 ENV NODE_ENV=production
 
@@ -67,6 +68,12 @@ RUN addgroup --system --gid 1001 apigroup && \
 
 # Copy production node_modules (with Prisma client generated)
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./node_modules
+COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
+
+# Fail the image build if runtime dependencies needed during API startup are missing.
+RUN node -e "require('express'); require('redis'); require('rate-limit-redis'); require('multer')"
 
 # Copy compiled API output
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
@@ -75,6 +82,9 @@ COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 # Copy compiled db package output
 COPY --from=builder /app/packages/db/dist ./packages/db/dist
 COPY --from=builder /app/packages/db/package.json ./packages/db/package.json
+
+# Verify the generated Prisma client is present for the DB workspace.
+RUN node -e "import('./packages/db/dist/index.js').catch((error) => { console.error(error); process.exit(1); })"
 
 # Copy root package.json for workspace resolution
 COPY --from=builder /app/package.json ./package.json
