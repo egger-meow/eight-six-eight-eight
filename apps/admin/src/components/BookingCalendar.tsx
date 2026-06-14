@@ -33,11 +33,29 @@ interface CalendarRoom {
   days: CalendarDay[];
 }
 
+const statusLabels: Record<string, string> = {
+  pending: '待確認',
+  confirmed: '已確認',
+  checked_in: '已入住',
+  checked_out: '已退房',
+  cancelled: '已取消',
+  no_show: '未入住',
+};
+
+const sourceLabels: Record<string, string> = {
+  website: '官網',
+  phone: '電話',
+  line: 'LINE',
+  ota: 'OTA平台',
+  walk_in: '現場',
+  admin: '後台新增',
+};
+
 function formatDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return year + '-' + month + '-' + day;
 }
 
 export default function BookingCalendar({ refreshKey, onBookingClick, onDateClick }: CalendarProps) {
@@ -53,7 +71,7 @@ export default function BookingCalendar({ refreshKey, onBookingClick, onDateClic
         const month = currentDate.getMonth();
         const startDate = formatDate(new Date(year, month, 1));
         const endDate = formatDate(new Date(year, month + 1, 0));
-        const res = await apiFetch(`/bookings/calendar?from=${startDate}&to=${endDate}`);
+        const res = await apiFetch('/bookings/calendar?from=' + startDate + '&to=' + endDate);
         setRooms(res?.data?.rooms || []);
       } catch (err) {
         console.error('Failed to fetch calendar', err);
@@ -122,7 +140,7 @@ export default function BookingCalendar({ refreshKey, onBookingClick, onDateClic
                 {days.map(d => {
                   const day = room.days.find(item => item.date === d.dateString);
                   const statusClass = day && day.status !== 'available'
-                    ? day.status === 'booked' && day.booking ? `status-${day.booking.status}` : `status-${day.status}`
+                    ? day.status === 'booked' && day.booking ? 'status-' + day.booking.status : 'status-' + day.status
                     : '';
                   return (
                     <button
@@ -130,9 +148,17 @@ export default function BookingCalendar({ refreshKey, onBookingClick, onDateClic
                       type="button"
                       className={`${styles.dayCell} ${statusClass ? styles[statusClass] : ''}`}
                       onClick={() => day?.booking ? onBookingClick(day.booking.id) : onDateClick(room.room_id, d.dateString)}
-                      title={day?.booking ? `${day.booking.guest_name}｜${day.booking.check_in} ~ ${day.booking.check_out}` : day?.blocked_info?.reason || '可新增訂單'}
+                      aria-label={day?.booking ? '查看 ' + day.booking.guest_name + ' 訂單' : day?.blocked_info?.reason || '新增訂單'}
                     >
                       <span>{day ? getStatusLabel(day) : ''}</span>
+                      {day?.booking && (
+                        <div className={styles.tooltip} role="tooltip">
+                          <strong>{day.booking.guest_name}</strong>
+                          <small>{statusLabels[day.booking.status] || day.booking.status}｜{sourceLabels[day.booking.source] || day.booking.source}</small>
+                          <small>{day.booking.check_in} ~ {day.booking.check_out}</small>
+                          <small>{day.booking.guest_count} 人｜點擊處理</small>
+                        </div>
+                      )}
                     </button>
                   );
                 })}

@@ -92,6 +92,28 @@
   background-color: rgba(0, 0, 0, 0.01);
 }
 
+.clickableRow {
+  cursor: pointer;
+}
+
+.clickableRow:hover {
+  background-color: rgba(184, 156, 110, 0.08) !important;
+}
+
+.rowAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent-gold);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rowAction:hover {
+  color: var(--text-primary);
+}
+
 /* Status Badges */
 .badge {
   display: inline-flex;

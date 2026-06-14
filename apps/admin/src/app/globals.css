@@ -65,6 +65,13 @@ a {
   overflow-y: auto;
 }
 
+.auth-loading-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+}
+
 /* Utility classes */
 .card {
   background-color: var(--content-bg);

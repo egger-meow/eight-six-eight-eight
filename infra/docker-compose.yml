@@ -181,6 +181,9 @@ services:
     build:
       context: ..
       dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${ADMIN_PUBLIC_API_URL:-https://api.8688bnb.com/api/v1}
+        NEXT_DEPLOYMENT_ID: ${ADMIN_DEPLOYMENT_ID:-admin-20260614-api-url}
     container_name: 8688bnb-admin
     restart: unless-stopped
     expose: ["3001"]

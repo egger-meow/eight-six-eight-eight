@@ -6,6 +6,8 @@ const csrf_1 = require("../middleware/csrf");
 const validate_1 = require("../middleware/validate");
 const news_schema_1 = require("../schemas/news.schema");
 const common_schema_1 = require("../schemas/common.schema");
+const zod_1 = require("zod");
+const jwt_1 = require("../lib/jwt");
 const db_1 = require("@8688bnb/db");
 const router = (0, express_1.Router)();
 function mapNewsToResponse(n) {
@@ -20,12 +22,25 @@ function mapNewsToResponse(n) {
         updated_at: n.updatedAt.toISOString()
     };
 }
-router.get('/', (0, validate_1.validateQuery)(common_schema_1.PaginationQuerySchema), async (req, res, next) => {
+router.get('/', (0, validate_1.validateQuery)(common_schema_1.PaginationQuerySchema.extend({ include_hidden: zod_1.z.coerce.boolean().optional() })), async (req, res, next) => {
     try {
         const page = Number(req.query.page || 1);
         const per_page = Number(req.query.per_page || 10);
-        // Only return visible news for public endpoint
-        const where = { visible: true };
+        const includeHidden = String(req.query.include_hidden) === 'true';
+        let canIncludeHidden = false;
+        if (includeHidden) {
+            const token = req.cookies[auth_1.SESSION_COOKIE_NAME] || req.cookies['__Host-8688_session'];
+            if (token) {
+                try {
+                    req.user = (0, jwt_1.verifyToken)(token);
+                    canIncludeHidden = true;
+                }
+                catch {
+                    canIncludeHidden = false;
+                }
+            }
+        }
+        const where = canIncludeHidden ? {} : { visible: true };
         const [total, news] = await Promise.all([
             db_1.db.news.count({ where }),
             db_1.db.news.findMany({

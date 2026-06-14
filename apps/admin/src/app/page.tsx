@@ -7,9 +7,11 @@ import {
   DoorOpen,
   CalendarClock,
   CircleDollarSign,
-  AlertCircle
+  AlertCircle,
+  ClipboardCheck
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface DashboardStats {
   today_check_ins: number;
@@ -35,6 +37,7 @@ interface RecentBooking {
 }
 
 export default function Dashboard() {
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentBookings, setRecentBookings] = useState<RecentBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -148,22 +151,37 @@ export default function Dashboard() {
                   <th>日期</th>
                   <th>狀態</th>
                   <th>來源</th>
+                  <th>處理</th>
                 </tr>
               </thead>
               <tbody>
                 {recentBookings.length > 0 ? (
                   recentBookings.map(b => (
-                    <tr key={b.id}>
+                    <tr
+                      key={b.id}
+                      className={styles.clickableRow}
+                      onClick={() => router.push('/bookings?booking=' + b.id)}
+                    >
                       <td>{b.guest_name}</td>
                       <td>{b.room?.name_zh || `房型 #${b.room_id}`}</td>
                       <td>{b.check_in} ~ {b.check_out}</td>
                       <td>{getStatusBadge(b.status)}</td>
                       <td>{getSourceBadge(b.source)}</td>
+                      <td>
+                        <Link
+                          href={'/bookings?booking=' + b.id}
+                          className={styles.rowAction}
+                          onClick={(event: React.MouseEvent<HTMLAnchorElement>) => event.stopPropagation()}
+                        >
+                          <ClipboardCheck size={15} />
+                          查看
+                        </Link>
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                       尚無近期訂單
                     </td>
                   </tr>
@@ -178,9 +196,6 @@ export default function Dashboard() {
             <h2>快速功能</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <Link href="/bookings?action=new" className="btn btn-primary" style={{ width: '100%' }}>
-              新增訂單
-            </Link>
             <Link href="/blocked-dates" className="btn btn-secondary" style={{ width: '100%' }}>
               設定封鎖日期
             </Link>

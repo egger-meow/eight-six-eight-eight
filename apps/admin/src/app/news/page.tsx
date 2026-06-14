@@ -18,7 +18,7 @@ export default function NewsPage() {
   useEffect(() => {
     const fetchAnnouncement = async () => {
       try {
-        const res = await apiFetch('/news?per_page=20');
+        const res = await apiFetch('/news?include_hidden=true&per_page=20', { skipCache: true });
         const items = res?.data || [];
         const item = items.find((n: any) => n.pinned) || items[0];
         if (item) {
@@ -78,7 +78,7 @@ export default function NewsPage() {
     <div className="card" style={{ maxWidth: '800px' }}>
       <h2 style={{ marginBottom: '1.5rem', color: 'var(--text-primary)' }}>更新首頁公告</h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-        此處會更新目前置頂公告。前台若要即時顯示，網站端也需要改成讀取 API。
+        此處會更新目前置頂公告，官方網站首頁會顯示最新一筆公告內容。
       </p>
 
       <form onSubmit={handleSubmit}>

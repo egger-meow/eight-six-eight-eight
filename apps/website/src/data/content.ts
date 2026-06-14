@@ -301,6 +301,10 @@ export const bookingPage = {
     notSelected: { zh: '尚未選擇', en: 'Not selected' },
     price: { zh: '預估總價', en: 'Estimated Total' },
     priceNote: { zh: '實際金額與付款方式以民宿主人確認為準', en: 'Final price and payment method are confirmed by the host.' },
+    nightUnit: { zh: '晚', en: 'night' },
+    nightUnitPlural: { zh: '晚', en: 'nights' },
+    guestUnit: { zh: '人', en: 'guest' },
+    guestUnitPlural: { zh: '人', en: 'guests' },
   },
   actions: {
     submit: { zh: '送出線上預約', en: 'Submit Reservation' },
@@ -317,6 +321,8 @@ export const bookingPage = {
     unavailable: { zh: '此時段目前無法預約，請更換日期或透過 LINE 詢問其他安排。', en: 'This date range is unavailable. Please choose other dates or ask via LINE.' },
     success: { zh: '已送出預約，狀態為待確認。請透過 LINE 補充付款或抵達時間等細節。', en: 'Reservation submitted and pending confirmation. Please use LINE for payment or arrival details.' },
     failure: { zh: '訂房送出失敗，請稍後再試或使用 LINE 聯繫。', en: 'Reservation failed. Please try again later or contact us via LINE.' },
+    lineCopied: { zh: '訂房資訊已複製，請貼到 LINE 訊息中傳送給民宿主人。', en: 'Reservation details copied. Please paste them into LINE and send them to the host.' },
+    lineCopyFailed: { zh: '無法自動複製訂房資訊，請手動複製摘要後使用 LINE 聯繫。', en: 'Could not copy reservation details automatically. Please copy the summary and contact us via LINE.' },
   },
 } as const;
 

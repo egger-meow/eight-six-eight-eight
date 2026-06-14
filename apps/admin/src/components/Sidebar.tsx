@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
   CalendarDays, 
-  BedDouble, 
   Newspaper, 
   Image as ImageIcon, 
   Settings, 
@@ -20,7 +19,6 @@ import { useAuth } from '@/context/AuthContext';
 const navItems = [
   { name: '總覽 Dashboard', href: '/', icon: LayoutDashboard },
   { name: '訂單與行事曆', href: '/bookings', icon: CalendarDays },
-  { name: '房型管理', href: '/rooms', icon: BedDouble },
   { name: '封鎖日期', href: '/blocked-dates', icon: CalendarOff },
   { name: '公告管理', href: '/news', icon: Newspaper },
   { name: '圖片管理', href: '/media', icon: ImageIcon },

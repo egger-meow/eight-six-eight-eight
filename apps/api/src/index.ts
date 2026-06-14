@@ -22,6 +22,10 @@ import systemRouter from './routes/system.routes';
 
 const app = express();
 
+if (config.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Security Middlewares
 app.use(helmet());
 app.use(cors({

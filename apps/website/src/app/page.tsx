@@ -13,7 +13,7 @@ import {
   featuresSection,
   mapSection,
 } from '@/data/content';
-import { getMedia, getNews, getRooms, mediaUrl, type WebsiteMedia, type WebsiteRoom } from '@/lib/api';
+import { getMedia, getNews, getRooms, mediaUrl, type WebsiteMedia, type WebsiteNews, type WebsiteRoom } from '@/lib/api';
 
 type NewsItem = { src: string; label: { zh: string; en: string }; date: string };
 type StayItem = { slug: string; image: string; name: { zh: string; en: string }; size: 'large' | 'tall' | 'sm' };
@@ -137,23 +137,27 @@ function NewsSection() {
   const { t } = useLang();
   const ref = useReveal();
   const [items, setItems] = useState<NewsItem[]>([...newsSection.items]);
+  const [latestNews, setLatestNews] = useState<WebsiteNews | null>(null);
 
   useEffect(() => {
     let mounted = true;
     Promise.all([getMedia('gallery'), getNews(8)]).then(([mediaResult, newsResult]) => {
-      if (!mounted || mediaResult.media.length === 0) return;
-      setItems(mediaResult.media.slice(0, 8).map((item, index) => {
-        const news = newsResult.news[index];
-        const fallback = newsSection.items[index];
-        return {
-          src: item.url,
-          label: {
-            zh: news?.title || item.alt_text || fallback?.label.zh || '民宿照片',
-            en: news?.title || item.alt_text || fallback?.label.en || 'B&B Photo',
-          },
-          date: news?.published_at?.slice(0, 7) || fallback?.date || '',
-        };
-      }));
+      if (!mounted) return;
+      setLatestNews(newsResult.news[0] || null);
+
+      if (mediaResult.media.length > 0) {
+        setItems(mediaResult.media.slice(0, 8).map((item, index) => {
+          const fallback = newsSection.items[index];
+          return {
+            src: item.url,
+            label: {
+              zh: item.alt_text || fallback?.label.zh || '民宿照片',
+              en: item.alt_text || fallback?.label.en || 'B&B Photo',
+            },
+            date: fallback?.date || '',
+          };
+        }));
+      }
     });
     return () => { mounted = false; };
   }, []);
@@ -163,8 +167,14 @@ function NewsSection() {
       <div className="container">
         <div className={`reveal ${styles.newsHeader}`} ref={ref}>
           <span className="section-label">{newsSection.labelEn}</span>
-          <h2 className="section-title">{t(newsSection.label)}</h2>
+          <h2 className="section-title">{latestNews?.title || t(newsSection.label)}</h2>
           <span className="gold-line center" />
+          {latestNews && (
+            <article className={styles.latestNews}>
+              <time className={styles.latestNewsDate}>{latestNews.published_at?.slice(0, 10) || ''}</time>
+              <p>{latestNews.content}</p>
+            </article>
+          )}
         </div>
         <div className={styles.newsGrid}>
           {items.map((item, i) => (

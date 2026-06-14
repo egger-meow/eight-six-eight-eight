@@ -8,7 +8,7 @@ import { bookingPage } from '@/data/content';
 import { checkAvailability, createBooking, getRooms, hasWebsiteApi, mediaUrl, type BookingResult, type WebsiteRoom } from '@/lib/api';
 import styles from './booking.module.css';
 
-const lineBaseUrl = 'https://line.me/R/oaMessage/@gps2290j/';
+const lineProfileUrl = 'https://line.me/ti/p/~@gps2290j';
 
 type FormState = {
   checkIn: string;
@@ -67,11 +67,21 @@ function localEstimate(room: WebsiteRoom | undefined, checkIn: string, checkOut:
   return total;
 }
 
-function lineHref(room: WebsiteRoom | undefined, form: FormState, totalPrice?: number | null, bookingId?: number) {
-  const message = [
+function roomDisplayName(room: WebsiteRoom | undefined, lang: 'zh' | 'en') {
+  if (!room) return '';
+  return lang === 'en' ? room.name_en || room.name_zh : room.name_zh;
+}
+
+function unitLabel(count: number, singular: string, plural: string) {
+  return count === 1 ? singular : plural;
+}
+
+function lineMessage(room: WebsiteRoom | undefined, form: FormState, totalPrice?: number | null, bookingId?: number) {
+  return [
     '你好，我想預約訂房：',
     bookingId ? `訂單編號：${bookingId}` : null,
     `房型：${room?.name_zh || '尚未選擇'}`,
+    room?.name_en ? `Room: ${room.name_en}` : null,
     `入住：${form.checkIn || '尚未選擇'}`,
     `退房：${form.checkOut || '尚未選擇'}`,
     `人數：${form.guestCount}人`,
@@ -82,12 +92,27 @@ function lineHref(room: WebsiteRoom | undefined, form: FormState, totalPrice?: n
     form.notes ? `備註：${form.notes}` : null,
     '請協助確認是否可入住，謝謝。',
   ].filter(Boolean).join('\n');
+}
 
-  return `${lineBaseUrl}?${encodeURIComponent(message)}`;
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
 }
 
 function BookingForm() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const searchParams = useSearchParams();
   const initialRoom = searchParams.get('room') || '';
   const [rooms, setRooms] = useState<WebsiteRoom[]>([]);
@@ -127,7 +152,7 @@ function BookingForm() {
     setForm((current) => ({
       ...current,
       checkIn: value,
-      checkOut: current.checkOut && current.checkOut > value ? current.checkOut : nextDate(value),
+      checkOut: nextDate(value),
     }));
   }
 
@@ -138,6 +163,17 @@ function BookingForm() {
       roomSlug: value,
       guestCount: selectedRoom ? Math.min(current.guestCount, selectedRoom.capacity) : current.guestCount,
     }));
+  }
+
+  async function handleLineClick() {
+    const message = lineMessage(room, form, success?.total_price ?? estimatedPrice, success?.id);
+    try {
+      await copyText(message);
+      setStatus(t(bookingPage.messages.lineCopied));
+    } catch {
+      setStatus(t(bookingPage.messages.lineCopyFailed));
+    }
+    window.open(lineProfileUrl, '_blank', 'noopener,noreferrer');
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -252,8 +288,8 @@ function BookingForm() {
                   />
                 )}
               </span>
-              <span className={styles.roomName}>{item.name_zh}</span>
-              <span className={styles.roomCapacity}>可住 {item.capacity} 人</span>
+              <span className={styles.roomName}>{roomDisplayName(item, lang)}</span>
+              <span className={styles.roomCapacity}>{lang === 'en' ? `Up to ${item.capacity} ${unitLabel(item.capacity, 'guest', 'guests')}` : `可住 ${item.capacity} 人`}</span>
             </button>
           ))}
         </div>
@@ -320,29 +356,28 @@ function BookingForm() {
         <h3 className={styles.summaryTitle}>{t(bookingPage.summary.title)}</h3>
         <div className={styles.summaryRow}><span>{t(bookingPage.fields.checkIn)}</span><span>{form.checkIn || t(bookingPage.summary.notSelected)}</span></div>
         <div className={styles.summaryRow}><span>{t(bookingPage.fields.checkOut)}</span><span>{form.checkOut || t(bookingPage.summary.notSelected)}</span></div>
-        <div className={styles.summaryRow}><span>{t(bookingPage.summary.nights)}</span><span>{nightCount > 0 ? String(nightCount) + ' 晚' : t(bookingPage.summary.notSelected)}</span></div>
-        <div className={styles.summaryRow}><span>{t(bookingPage.summary.room)}</span><span>{room?.name_zh || t(bookingPage.summary.notSelected)}</span></div>
-        <div className={styles.summaryRow}><span>{t(bookingPage.summary.guests)}</span><span>{form.guestCount} 人</span></div>
+        <div className={styles.summaryRow}><span>{t(bookingPage.summary.nights)}</span><span>{nightCount > 0 ? `${nightCount} ${unitLabel(nightCount, t(bookingPage.summary.nightUnit), t(bookingPage.summary.nightUnitPlural))}` : t(bookingPage.summary.notSelected)}</span></div>
+        <div className={styles.summaryRow}><span>{t(bookingPage.summary.room)}</span><span>{roomDisplayName(room, lang) || t(bookingPage.summary.notSelected)}</span></div>
+        <div className={styles.summaryRow}><span>{t(bookingPage.summary.guests)}</span><span>{`${form.guestCount} ${unitLabel(form.guestCount, t(bookingPage.summary.guestUnit), t(bookingPage.summary.guestUnitPlural))}`}</span></div>
         <div className={styles.totalPrice}>
           {t(bookingPage.summary.price)}：NT$ {(success?.total_price ?? estimatedPrice).toLocaleString()}
           <p>{t(bookingPage.summary.priceNote)}</p>
         </div>
       </div>
 
-      {status && <div className={success ? styles.success : styles.error}>{status}</div>}
+      {status && <div className={success || status === t(bookingPage.messages.lineCopied) ? styles.success : styles.error}>{status}</div>}
 
       <div className={styles.actions}>
         <button className={`btn ${styles.submitBtn}`} type="submit" disabled={submitting || !apiAvailable}>
           {submitting ? t(bookingPage.actions.submitting) : t(bookingPage.actions.submit)}
         </button>
-        <a
+        <button
           className={`btn ${styles.lineBtn}`}
-          href={lineHref(room, form, success?.total_price ?? estimatedPrice, success?.id)}
-          target="_blank"
-          rel="noopener noreferrer"
+          type="button"
+          onClick={handleLineClick}
         >
           {t(bookingPage.actions.line)}
-        </a>
+        </button>
       </div>
     </form>
   );

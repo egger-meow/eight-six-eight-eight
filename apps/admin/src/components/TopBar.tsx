@@ -7,7 +7,6 @@ import styles from './TopBar.module.css';
 const routeTitles: Record<string, string> = {
   '/': '總覽',
   '/bookings': '訂單與行事曆',
-  '/rooms': '房型管理',
   '/blocked-dates': '封鎖日期',
   '/news': '公告管理',
   '/media': '圖片管理',

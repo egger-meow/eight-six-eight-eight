@@ -18,6 +18,8 @@ RUN turbo prune @8688bnb/admin --docker
 
 # ── Stage 2: Build the application ──────────────────────────────────────────
 FROM node:22-alpine AS builder
+ARG NEXT_PUBLIC_API_URL=https://api.8688bnb.com/api/v1
+ARG NEXT_DEPLOYMENT_ID=admin-20260614-api-url
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 
@@ -34,6 +36,8 @@ COPY --from=pruner /app/out/full/ .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_DEPLOYMENT_ID=$NEXT_DEPLOYMENT_ID
 
 # Build only the admin app and its internal dependencies
 RUN npx turbo run build --filter=@8688bnb/admin
@@ -44,6 +48,8 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=https://api.8688bnb.com/api/v1
+ENV NEXT_DEPLOYMENT_ID=admin-20260614-api-url
 
 # Security: run as non-root user
 RUN addgroup --system --gid 1001 nodejs && \

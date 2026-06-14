@@ -173,6 +173,22 @@
   margin-bottom: 3rem;
 }
 
+.latestNews {
+  max-width: 760px;
+  margin: 1.5rem auto 0;
+  color: var(--color-ink-soft);
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  line-height: 1.9;
+}
+
+.latestNewsDate {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--color-gold-dark);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+}
+
 .newsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -24,6 +24,9 @@ const dashboard_routes_1 = __importDefault(require("./routes/dashboard.routes"))
 const webhooks_routes_1 = __importDefault(require("./routes/webhooks.routes"));
 const system_routes_1 = __importDefault(require("./routes/system.routes"));
 const app = (0, express_1.default)();
+if (config_1.config.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
 // Security Middlewares
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
