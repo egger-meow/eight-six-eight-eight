@@ -7,6 +7,7 @@ const validate_1 = require("../middleware/validate");
 const bookings_schema_1 = require("../schemas/bookings.schema");
 const common_schema_1 = require("../schemas/common.schema");
 const db_1 = require("@8688bnb/db");
+const pricing_1 = require("../lib/pricing");
 const router = (0, express_1.Router)();
 function mapBookingToResponse(b) {
     return {
@@ -111,19 +112,7 @@ router.post('/', (0, validate_1.validate)(bookings_schema_1.BookingCreateSchema)
         if (blockedConflict) {
             return res.status(409).json({ success: false, error: { code: 'BLOCKED_DATE', message: '該時段目前無法預訂' } });
         }
-        // Calculate total price
-        let totalPrice = 0;
-        let curr = new Date(checkInDate);
-        while (curr < checkOutDate) {
-            const day = curr.getDay();
-            if (day === 5 || day === 6) {
-                totalPrice += room.priceWeekend;
-            }
-            else {
-                totalPrice += room.priceWeekday;
-            }
-            curr.setDate(curr.getDate() + 1);
-        }
+        const totalPrice = await (0, pricing_1.calculateStayPrice)(room, checkInDate, checkOutDate);
         const booking = await db_1.db.booking.create({
             data: {
                 roomId: data.room_id,

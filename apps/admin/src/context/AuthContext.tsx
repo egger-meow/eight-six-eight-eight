@@ -39,10 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchSession = async () => {
     try {
       setLoading(true);
-      await refreshCsrf();
       const data = await apiFetch('/auth/me');
       if (data?.data) {
         setUser(data.data);
+        await refreshCsrf();
       }
     } catch (error) {
       setUser(null);

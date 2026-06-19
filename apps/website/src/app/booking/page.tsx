@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useLang } from '@/context/LanguageContext';
 import { bookingPage } from '@/data/content';
-import { checkAvailability, createBooking, getRooms, hasWebsiteApi, mediaUrl, type BookingResult, type WebsiteRoom } from '@/lib/api';
+import { checkAllRoomsAvailability, checkAvailability, createBooking, getRooms, hasWebsiteApi, mediaUrl, type AvailabilityResult, type BookingResult, type WebsiteRoom } from '@/lib/api';
 import styles from './booking.module.css';
 
 const lineProfileUrl = 'https://line.me/ti/p/~@gps2290j';
@@ -20,6 +20,8 @@ type FormState = {
   guestLineId: string;
   notes: string;
 };
+
+type ModalMode = 'submit' | 'line' | null;
 
 const initialState: FormState = {
   checkIn: '',
@@ -84,6 +86,7 @@ function lineMessage(room: WebsiteRoom | undefined, form: FormState, totalPrice?
     room?.name_en ? `Room: ${room.name_en}` : null,
     `入住：${form.checkIn || '尚未選擇'}`,
     `退房：${form.checkOut || '尚未選擇'}`,
+    `晚數：${nightsBetween(form.checkIn, form.checkOut)}晚`,
     `人數：${form.guestCount}人`,
     form.guestName ? `姓名：${form.guestName}` : null,
     form.guestPhone ? `電話：${form.guestPhone}` : null,
@@ -121,6 +124,10 @@ function BookingForm() {
   const [status, setStatus] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<BookingResult | null>(null);
+  const [apiEstimatedPrice, setApiEstimatedPrice] = useState<number | null>(null);
+  const [roomAvailability, setRoomAvailability] = useState<Record<string, AvailabilityResult>>({});
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
   const today = useMemo(() => todayString(), []);
 
   useEffect(() => {
@@ -139,24 +146,57 @@ function BookingForm() {
 
   const room = rooms.find((item) => item.slug === form.roomSlug);
   const nightCount = nightsBetween(form.checkIn, form.checkOut);
-  const estimatedPrice = useMemo(
+  const fallbackPrice = useMemo(
     () => localEstimate(room, form.checkIn, form.checkOut),
     [room, form.checkIn, form.checkOut]
   );
+  const estimatedPrice = apiEstimatedPrice ?? fallbackPrice;
+  const currentLineMessage = lineMessage(room, form, success?.total_price ?? estimatedPrice, success?.id);
+
+  useEffect(() => {
+    let mounted = true;
+    setApiEstimatedPrice(null);
+    setRoomAvailability({});
+    if (!apiAvailable || rooms.length === 0 || nightCount <= 0) return;
+
+    setAvailabilityLoading(true);
+    checkAllRoomsAvailability(rooms, form.checkIn, form.checkOut)
+      .then((availabilityByRoom) => {
+        if (!mounted) return;
+        setRoomAvailability(availabilityByRoom);
+        const selectedAvailability = availabilityByRoom[form.roomSlug];
+        setApiEstimatedPrice(selectedAvailability?.estimated_price ?? null);
+        if (selectedAvailability && !selectedAvailability.available) {
+          const nextAvailable = rooms.find((candidate) => availabilityByRoom[candidate.slug]?.available);
+          setForm((current) => ({ ...current, roomSlug: nextAvailable?.slug || '' }));
+        }
+      })
+      .catch(() => {
+        if (mounted) setRoomAvailability({});
+      })
+      .finally(() => {
+        if (mounted) setAvailabilityLoading(false);
+      });
+    return () => { mounted = false; };
+  }, [apiAvailable, rooms, form.checkIn, form.checkOut, form.roomSlug, nightCount]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
   function updateCheckIn(value: string) {
-    setForm((current) => ({
-      ...current,
-      checkIn: value,
-      checkOut: nextDate(value),
-    }));
+    setForm((current) => {
+      const minimumCheckout = nextDate(value);
+      return {
+        ...current,
+        checkIn: value,
+        checkOut: current.checkOut && current.checkOut > value ? current.checkOut : minimumCheckout,
+      };
+    });
   }
 
   function updateRoomSlug(value: string) {
+    if (roomAvailability[value] && !roomAvailability[value].available) return;
     const selectedRoom = rooms.find((item) => item.slug === value);
     setForm((current) => ({
       ...current,
@@ -165,46 +205,59 @@ function BookingForm() {
     }));
   }
 
-  async function handleLineClick() {
-    const message = lineMessage(room, form, success?.total_price ?? estimatedPrice, success?.id);
+  function validateForm(requireContact: boolean) {
+    setStatus('');
+    if (!room) {
+      setStatus(t(bookingPage.messages.selectRoom));
+      return false;
+    }
+    if (nightCount <= 0) {
+      setStatus(t(bookingPage.messages.invalidDates));
+      return false;
+    }
+    if (roomAvailability[room.slug] && !roomAvailability[room.slug].available) {
+      setStatus(t(bookingPage.messages.unavailable));
+      return false;
+    }
+    if (form.guestCount > room.capacity) {
+      setStatus(`${t(bookingPage.messages.capacity)} ${room.capacity}${t(bookingPage.messages.capacitySuffix)}`);
+      return false;
+    }
+    if (requireContact && (!form.guestName.trim() || !form.guestPhone.trim())) {
+      setStatus(t(bookingPage.messages.requiredContact));
+      return false;
+    }
+    return true;
+  }
+
+  function handleLineClick() {
+    if (!validateForm(false)) return;
+    setModalMode('line');
+  }
+
+  async function confirmLine() {
     try {
-      await copyText(message);
+      await copyText(currentLineMessage);
       setStatus(t(bookingPage.messages.lineCopied));
     } catch {
       setStatus(t(bookingPage.messages.lineCopyFailed));
     }
+    setModalMode(null);
     window.open(lineProfileUrl, '_blank', 'noopener,noreferrer');
   }
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    setStatus('');
-    setSuccess(null);
-
-    if (!room) {
-      setStatus(t(bookingPage.messages.selectRoom));
-      return;
-    }
-    if (nightCount <= 0) {
-      setStatus(t(bookingPage.messages.invalidDates));
-      return;
-    }
-    if (form.guestCount > room.capacity) {
-      setStatus(`${t(bookingPage.messages.capacity)} ${room.capacity}${t(bookingPage.messages.capacitySuffix)}`);
-      return;
-    }
-    if (!form.guestName.trim() || !form.guestPhone.trim()) {
-      setStatus(t(bookingPage.messages.requiredContact));
-      return;
-    }
+  async function submitReservation() {
+    if (!validateForm(true) || !room) return;
     if (!apiAvailable || typeof room.id !== 'number') {
       setStatus(t(bookingPage.messages.apiUnavailable));
       return;
     }
 
     setSubmitting(true);
+    setSuccess(null);
     try {
       const availability = await checkAvailability(room.slug, form.checkIn, form.checkOut);
+      setApiEstimatedPrice(availability.estimated_price);
       if (!availability.available) {
         setStatus(t(bookingPage.messages.unavailable));
         return;
@@ -222,6 +275,8 @@ function BookingForm() {
       });
       setSuccess(booking);
       setStatus(t(bookingPage.messages.success));
+      setModalMode(null);
+      window.location.href = '/';
     } catch (error) {
       const message = error instanceof Error ? error.message : '訂房送出失敗';
       setStatus(message || t(bookingPage.messages.failure));
@@ -230,8 +285,21 @@ function BookingForm() {
     }
   }
 
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setSuccess(null);
+    if (!validateForm(true)) return;
+    if (!apiAvailable || typeof room?.id !== 'number') {
+      setStatus(t(bookingPage.messages.apiUnavailable));
+      return;
+    }
+    setModalMode('submit');
+  }
+
   return (
     <form className={styles.bookingForm} onSubmit={handleSubmit}>
+      <div className={styles.notice}>{t(bookingPage.testWarning)}</div>
+
       {!apiAvailable && (
         <div className={styles.notice}>
           {t(bookingPage.unavailableNotice)}
@@ -243,112 +311,49 @@ function BookingForm() {
         <div className={styles.inputGrid}>
           <label>
             <span>{t(bookingPage.fields.checkIn)}</span>
-            <input
-              type="date"
-              className={styles.formControl}
-              value={form.checkIn}
-              onChange={(event) => updateCheckIn(event.target.value)}
-              min={today}
-              required
-            />
+            <input type="date" className={styles.formControl} value={form.checkIn} onChange={(event) => updateCheckIn(event.target.value)} min={today} required />
           </label>
           <label>
             <span>{t(bookingPage.fields.checkOut)}</span>
-            <input
-              type="date"
-              className={styles.formControl}
-              value={form.checkOut}
-              onChange={(event) => update('checkOut', event.target.value)}
-              min={form.checkIn ? nextDate(form.checkIn) : today}
-              required
-            />
+            <input type="date" className={styles.formControl} value={form.checkOut} onChange={(event) => update('checkOut', event.target.value)} min={form.checkIn ? nextDate(form.checkIn) : today} required />
           </label>
         </div>
       </div>
 
       <div className={styles.formGroup}>
         <h2 className={styles.formLabel}>{t(bookingPage.sections.room)}</h2>
+        {availabilityLoading && <p className={styles.availabilityHint}>{lang === 'en' ? 'Checking room availability...' : '正在查詢所選日期可預訂房型...'}</p>}
         <div className={styles.roomSelectGrid}>
-          {rooms.map((item) => (
-            <button
-              key={item.slug}
-              type="button"
-              className={`${styles.roomCard} ${form.roomSlug === item.slug ? styles.selected : ''}`}
-              onClick={() => updateRoomSlug(item.slug)}
-              aria-pressed={form.roomSlug === item.slug}
-            >
-              <span className={styles.roomPreview} aria-hidden="true">
-                {item.images[0]?.url && (
-                  <Image
-                    src={mediaUrl(item.images[0].url)}
-                    alt=""
-                    fill
-                    sizes="(max-width: 768px) 80vw, 220px"
-                    style={{ objectFit: 'cover' }}
-                  />
-                )}
-              </span>
-              <span className={styles.roomName}>{roomDisplayName(item, lang)}</span>
-              <span className={styles.roomCapacity}>{lang === 'en' ? `Up to ${item.capacity} ${unitLabel(item.capacity, 'guest', 'guests')}` : `可住 ${item.capacity} 人`}</span>
-            </button>
-          ))}
+          {rooms.map((item) => {
+            const checkedAvailability = roomAvailability[item.slug];
+            const isUnavailable = Boolean(checkedAvailability && !checkedAvailability.available);
+            return (
+              <button key={item.slug} type="button" disabled={isUnavailable} className={`${styles.roomCard} ${form.roomSlug === item.slug ? styles.selected : ''} ${isUnavailable ? styles.unavailableRoom : ''}`} onClick={() => updateRoomSlug(item.slug)} aria-pressed={form.roomSlug === item.slug}>
+                <span className={styles.roomPreview} aria-hidden="true">
+                  {item.images[0]?.url && <Image src={mediaUrl(item.images[0].url)} alt="" fill sizes="(max-width: 768px) 80vw, 220px" style={{ objectFit: 'cover' }} />}
+                </span>
+                <span className={styles.roomName}>{roomDisplayName(item, lang)}</span>
+                <span className={styles.roomCapacity}>{isUnavailable ? (lang === 'en' ? 'Unavailable for selected dates' : '所選日期不可預訂') : (lang === 'en' ? `Up to ${item.capacity} ${unitLabel(item.capacity, 'guest', 'guests')}` : `可住 ${item.capacity} 人`)}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className={styles.formGroup}>
         <h2 className={styles.formLabel}>{t(bookingPage.sections.guest)}</h2>
         <div className={styles.inputGrid}>
-          <label>
-            <span>{t(bookingPage.fields.guestCount)}</span>
-            <input
-              type="number"
-              min="1"
-              max={room?.capacity || 10}
-              className={styles.formControl}
-              value={form.guestCount}
-              onChange={(event) => update('guestCount', Math.min(Number(event.target.value), room?.capacity || 10))}
-              required
-            />
-          </label>
-          <label>
-            <span>{t(bookingPage.fields.name)}</span>
-            <input
-              className={styles.formControl}
-              value={form.guestName}
-              onChange={(event) => update('guestName', event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            <span>{t(bookingPage.fields.phone)}</span>
-            <input
-              className={styles.formControl}
-              value={form.guestPhone}
-              onChange={(event) => update('guestPhone', event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            <span>{t(bookingPage.fields.lineId)}</span>
-            <input
-              className={styles.formControl}
-              value={form.guestLineId}
-              onChange={(event) => update('guestLineId', event.target.value)}
-            />
-          </label>
+          <label><span>{t(bookingPage.fields.guestCount)}</span><input type="number" min="1" max={room?.capacity || 10} className={styles.formControl} value={form.guestCount} onChange={(event) => update('guestCount', Math.min(Number(event.target.value), room?.capacity || 10))} required /></label>
+          <label><span>{t(bookingPage.fields.name)}</span><input className={styles.formControl} value={form.guestName} onChange={(event) => update('guestName', event.target.value)} required /></label>
+          <label><span>{t(bookingPage.fields.phone)}</span><input className={styles.formControl} value={form.guestPhone} onChange={(event) => update('guestPhone', event.target.value)} required /></label>
+          <label><span>{t(bookingPage.fields.lineId)}</span><input className={styles.formControl} value={form.guestLineId} onChange={(event) => update('guestLineId', event.target.value)} /></label>
         </div>
       </div>
 
       <div className={styles.formGroup}>
         <label>
           <span className={styles.formLabel}>{t(bookingPage.sections.notes)}</span>
-          <textarea
-            className={styles.formControl}
-            rows={4}
-            value={form.notes}
-            onChange={(event) => update('notes', event.target.value)}
-            placeholder={t(bookingPage.placeholders.notes)}
-          />
+          <textarea className={styles.formControl} rows={4} value={form.notes} onChange={(event) => update('notes', event.target.value)} placeholder={t(bookingPage.placeholders.notes)} />
         </label>
       </div>
 
@@ -359,26 +364,44 @@ function BookingForm() {
         <div className={styles.summaryRow}><span>{t(bookingPage.summary.nights)}</span><span>{nightCount > 0 ? `${nightCount} ${unitLabel(nightCount, t(bookingPage.summary.nightUnit), t(bookingPage.summary.nightUnitPlural))}` : t(bookingPage.summary.notSelected)}</span></div>
         <div className={styles.summaryRow}><span>{t(bookingPage.summary.room)}</span><span>{roomDisplayName(room, lang) || t(bookingPage.summary.notSelected)}</span></div>
         <div className={styles.summaryRow}><span>{t(bookingPage.summary.guests)}</span><span>{`${form.guestCount} ${unitLabel(form.guestCount, t(bookingPage.summary.guestUnit), t(bookingPage.summary.guestUnitPlural))}`}</span></div>
-        <div className={styles.totalPrice}>
-          {t(bookingPage.summary.price)}：NT$ {(success?.total_price ?? estimatedPrice).toLocaleString()}
-          <p>{t(bookingPage.summary.priceNote)}</p>
-        </div>
+        <div className={styles.totalPrice}>{t(bookingPage.summary.price)}：NT$ {(success?.total_price ?? estimatedPrice).toLocaleString()}<p>{t(bookingPage.summary.priceNote)}</p></div>
       </div>
 
       {status && <div className={success || status === t(bookingPage.messages.lineCopied) ? styles.success : styles.error}>{status}</div>}
 
       <div className={styles.actions}>
-        <button className={`btn ${styles.submitBtn}`} type="submit" disabled={submitting || !apiAvailable}>
-          {submitting ? t(bookingPage.actions.submitting) : t(bookingPage.actions.submit)}
-        </button>
-        <button
-          className={`btn ${styles.lineBtn}`}
-          type="button"
-          onClick={handleLineClick}
-        >
-          {t(bookingPage.actions.line)}
-        </button>
+        <button className={`btn ${styles.submitBtn}`} type="submit" disabled={submitting || !apiAvailable}>{submitting ? t(bookingPage.actions.submitting) : t(bookingPage.actions.submit)}</button>
+        <button className={`btn ${styles.lineBtn}`} type="button" onClick={handleLineClick}>{t(bookingPage.actions.line)}</button>
       </div>
+
+      {modalMode && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+          <div className={styles.modalCard}>
+            <h2>{t(modalMode === 'submit' ? bookingPage.confirmation.submitTitle : bookingPage.confirmation.lineTitle)}</h2>
+            <p className={styles.modalWarning}>{t(bookingPage.confirmation.testNote)}</p>
+            {modalMode === 'line' ? (
+              <pre className={styles.messagePreview}>{currentLineMessage}</pre>
+            ) : (
+              <div className={styles.modalSummary}>
+                <div><span>{t(bookingPage.summary.room)}</span><strong>{roomDisplayName(room, lang)}</strong></div>
+                <div><span>{t(bookingPage.fields.checkIn)}</span><strong>{form.checkIn}</strong></div>
+                <div><span>{t(bookingPage.fields.checkOut)}</span><strong>{form.checkOut}</strong></div>
+                <div><span>{t(bookingPage.summary.nights)}</span><strong>{nightCount}</strong></div>
+                <div><span>{t(bookingPage.summary.guests)}</span><strong>{form.guestCount}</strong></div>
+                <div><span>{t(bookingPage.confirmation.contact)}</span><strong>{form.guestName} / {form.guestPhone}{form.guestLineId ? ` / LINE ${form.guestLineId}` : ''}</strong></div>
+                <div><span>{t(bookingPage.confirmation.notes)}</span><strong>{form.notes || t(bookingPage.confirmation.emptyNotes)}</strong></div>
+                <div><span>{t(bookingPage.summary.price)}</span><strong>NT$ {estimatedPrice.toLocaleString()}</strong></div>
+              </div>
+            )}
+            <div className={styles.modalActions}>
+              <button type="button" className="btn" onClick={() => setModalMode(null)}>{t(bookingPage.actions.cancel)}</button>
+              <button type="button" className={`btn ${modalMode === 'line' ? styles.lineBtn : styles.submitBtn}`} disabled={submitting} onClick={modalMode === 'line' ? confirmLine : submitReservation}>
+                {modalMode === 'line' ? t(bookingPage.actions.confirmLine) : t(bookingPage.actions.confirmSubmit)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

@@ -272,6 +272,10 @@ export const bookingPage = {
     zh: '送出預約後由民宿主人確認房況與付款細節',
     en: 'Submit a request and the host will confirm availability and payment details.',
   },
+  testWarning: {
+    zh: '官網訂房功能測試中，請勿於本網站進行訂房操作。本網站顯示之空房、價格、送出資料或系統通知皆不視為有效訂房，也不代表民宿已保留房間。正式訂房請透過電話、LINE 或其他正式訂房平台聯繫。',
+    en: 'Website reservation is currently in testing. Do not use this website to make an actual reservation. Availability, prices, submitted records, or system notices shown here are not valid reservations and do not mean a room has been held. Please book officially by phone, LINE, or an official booking platform.',
+  },
   unavailableNotice: {
     zh: '線上空房查詢與送出暫時無法使用。您仍可填寫資料後使用 LINE 聯繫民宿主人。',
     en: 'Online availability and submission are temporarily unavailable. You can still prepare the details and contact the host via LINE.',
@@ -310,6 +314,17 @@ export const bookingPage = {
     submit: { zh: '送出線上預約', en: 'Submit Reservation' },
     submitting: { zh: '送出中...', en: 'Submitting...' },
     line: { zh: '使用 LINE 聯繫確認', en: 'Confirm via LINE' },
+    confirmSubmit: { zh: '確認送出測試預約', en: 'Confirm Test Submission' },
+    confirmLine: { zh: '複製並開啟 LINE', en: 'Copy and Open LINE' },
+    cancel: { zh: '取消', en: 'Cancel' },
+  },
+  confirmation: {
+    submitTitle: { zh: '確認送出預約資料', en: 'Confirm Reservation Details' },
+    lineTitle: { zh: '確認 LINE 訊息內容', en: 'Confirm LINE Message' },
+    testNote: { zh: '提醒：官網訂房功能仍在測試中，送出資料不視為有效訂房。', en: 'Reminder: website reservation is in testing, and submitted records are not valid reservations.' },
+    contact: { zh: '聯絡資料', en: 'Contact' },
+    notes: { zh: '備註', en: 'Notes' },
+    emptyNotes: { zh: '未填寫', en: 'None' },
   },
   messages: {
     selectRoom: { zh: '請選擇房型。', en: 'Please select a room type.' },
@@ -331,37 +346,51 @@ export const bookingPage = {
 ──────────────────────────────────────────────── */
 export const bookingInfoPage = {
   metaTitle: { zh: '訂房資訊｜86.88民宿', en: 'Booking Info | 86.88 B&B' },
-  h1:        { zh: '訂房資訊',            en: 'Booking Information'       },
+  h1: { zh: '訂房資訊', en: 'Booking Information' },
+  intro: {
+    zh: '訂房成立以前，請以電話、LINE 或正式訂房平台與民宿主人確認房況、價格與付款方式。',
+    en: 'Before a reservation is confirmed, please verify availability, price, and payment details with the host by phone, LINE, or an official booking platform.',
+  },
+  contacts: [
+    { label: { zh: 'LINE', en: 'LINE' }, value: '@gps2290j', href: 'http://line.naver.jp/ti/p/~@gps2290j' },
+    { label: { zh: '訂房專線', en: 'Phone' }, value: '0920-900-793', href: 'tel:0920900793' },
+    { label: { zh: '電子郵件', en: 'Email' }, value: '86.88hello@gmail.com', href: 'mailto:86.88hello@gmail.com' },
+  ],
   sections: [
     {
-      title: { zh: '訂房方式',     en: 'How to Book'       },
+      title: { zh: '訂房與付款確認', en: 'Reservation & Payment' },
       items: {
-        zh: ['透過LINE官方帳號：@gps2290j', '電話訂房：0920-900-793', '電子郵件：86.88hello@gmail.com'],
-        en: ['LINE Official Account: @gps2290j', 'Phone: 0920-900-793', 'Email: 86.88hello@gmail.com'],
+        zh: ['請先提供入住日期、退房日期、房型、人數與聯絡方式。', '民宿主人確認仍有空房後，會回覆實際價格與付款方式。', '完成主人指定的確認流程後，才視為正式訂房。'],
+        en: ['Send your check-in date, check-out date, room type, guest count, and contact details first.', 'The host will reply with confirmed availability, final price, and payment method.', 'A booking is official only after the host confirms the required steps are complete.'],
       },
     },
     {
-      title: { zh: '入退房時間',   en: 'Check-in / Check-out' },
+      title: { zh: '入住與退房', en: 'Check-in / Check-out' },
       items: {
-        zh: ['入住時間：15:00 以後', '退房時間：11:00 以前'],
-        en: ['Check-in: After 15:00', 'Check-out: Before 11:00'],
+        zh: ['入住時間：15:00 以後。', '退房時間：11:00 以前。', '如需提早抵達或延後退房，請事先與民宿主人確認。'],
+        en: ['Check-in: after 15:00.', 'Check-out: before 11:00.', 'Please confirm early arrival or late checkout with the host in advance.'],
       },
     },
     {
-      title: { zh: '取消政策',     en: 'Cancellation Policy'   },
+      title: { zh: '取消與異動', en: 'Cancellation & Changes' },
       items: {
-        zh: ['入住前7天取消：全額退費', '入住前3-6天取消：收取50%費用', '入住前3天內取消：不予退費'],
-        en: ['7+ days before: Full refund', '3-6 days before: 50% charge', 'Within 3 days: No refund'],
+        zh: ['取消、延期或更改房型，請盡早透過 LINE 或電話聯繫。', '退費與保留規則依主人確認與實際訂房平台規定為準。', '天候、交通或其他特殊狀況，請直接與主人討論處理方式。'],
+        en: ['For cancellation, postponement, or room changes, contact us by LINE or phone as early as possible.', 'Refund and hold policies follow the host confirmation and the booking platform terms.', 'For weather, transport, or special circumstances, please discuss directly with the host.'],
       },
     },
     {
-      title: { zh: '注意事項',     en: 'House Rules'           },
+      title: { zh: '住宿須知', en: 'House Rules' },
       items: {
-        zh: ['民宿內禁止吸菸', '請愛護可愛的貓咪', '22:00 後請保持安靜', '不可攜帶寵物入住'],
-        en: ['No smoking inside', 'Please be gentle with our cats', 'Quiet hours after 22:00', 'No pets allowed'],
+        zh: ['室內禁止吸菸。', '22:00 後請降低音量，維護住宿品質。', '請愛護民宿空間與貓咪，若有特殊需求請訂房時先告知。', '不可攜帶寵物入住，除非事前取得主人同意。'],
+        en: ['No smoking indoors.', 'Please keep noise down after 22:00.', 'Please take care of the property and resident cats; mention special needs when booking.', 'Pets are not allowed unless approved by the host in advance.'],
       },
     },
   ],
+  testNotice: {
+    zh: '官網訂房功能測試中，網站送出資料、顯示價格或系統回覆皆不視為有效訂房。正式訂房請透過電話、LINE 或其他正式訂房平台聯繫。',
+    en: 'Website reservation is in testing. Submitted records, shown prices, or system replies on this website are not valid reservations. Please book officially by phone, LINE, or an official booking platform.',
+  },
+  contactAction: { zh: '聯繫民宿主人', en: 'Contact Host' },
 } as const;
 
 /* ────────────────────────────────────────────────

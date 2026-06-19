@@ -1,11 +1,11 @@
 .subPage {
-  padding-top: 72px; /* Header height */
+  padding-top: 72px;
   background-color: var(--color-bg);
   min-height: 100vh;
 }
 
 .pageHeader {
-  padding: clamp(4rem, 8vw, 6rem) 0;
+  padding: clamp(4rem, 8vw, 6rem) 0 clamp(3rem, 6vw, 4.5rem);
   text-align: center;
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
@@ -18,61 +18,124 @@
   margin-bottom: 0.5rem;
 }
 
+.intro {
+  max-width: 720px;
+  margin: 1rem auto 0;
+  color: var(--color-ink-soft);
+  line-height: 1.9;
+}
+
 .contentSection {
   padding: var(--section-pad-v) 0;
 }
 
-.infoGrid {
+.notice {
+  max-width: 920px;
+  margin: 0 auto 2rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d8bd78;
+  border-radius: 6px;
+  background: #fff8e6;
+  color: #665018;
+  line-height: 1.8;
+}
+
+.contactBand {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 2rem;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  max-width: 920px;
+  margin: 0 auto 3rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-border);
 }
 
-.infoCard {
+.contactLink {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 92px;
+  padding: 1rem;
   background: var(--color-surface);
-  padding: clamp(1.5rem, 4vw, 2.5rem);
-  border-radius: 4px;
-  box-shadow: var(--shadow-sm);
-  border-left: 4px solid var(--color-gold);
-}
-
-.cardTitle {
-  font-family: var(--font-zh);
-  font-size: 1.5rem;
   color: var(--color-ink);
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
+  align-content: center;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.bullet {
-  color: var(--color-gold);
-  font-size: 1.2rem;
+.contactLink:hover {
+  background: var(--color-cream);
+  color: var(--color-gold-dark);
+}
+
+.contactLink span {
+  color: var(--color-ink-soft);
+  font-size: 0.85rem;
+}
+
+.contactLink strong {
+  font-size: 1.05rem;
+  word-break: break-word;
 }
 
 .infoList {
+  max-width: 920px;
+  margin: 0 auto;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.infoSection {
+  display: grid;
+  grid-template-columns: 0.38fr 1fr;
+  gap: clamp(1rem, 4vw, 3rem);
+  padding: clamp(1.5rem, 4vw, 2.5rem) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.infoSection h2 {
+  font-family: var(--font-zh);
+  font-size: clamp(1.25rem, 3vw, 1.6rem);
+  color: var(--color-ink);
+}
+
+.infoSection ul {
   list-style: none;
+  display: grid;
+  gap: 0.75rem;
   padding: 0;
 }
 
-.infoList li {
-  font-family: var(--font-zh);
-  font-size: 1rem;
-  color: var(--color-ink-soft);
-  line-height: 1.8;
-  margin-bottom: 0.8rem;
-  padding-left: 1.5rem;
+.infoSection li {
   position: relative;
+  padding-left: 1.35rem;
+  color: var(--color-ink-soft);
+  line-height: 1.85;
 }
 
-.infoList li::before {
-  content: '→';
+.infoSection li::before {
+  content: '';
   position: absolute;
   left: 0;
-  color: var(--color-gold-light);
+  top: 0.78em;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--color-gold);
 }
 
 .ctaBox {
+  max-width: 920px;
+  margin: 3rem auto 0;
   text-align: center;
+}
+
+@media (max-width: 760px) {
+  .contactBand {
+    grid-template-columns: 1fr;
+  }
+
+  .infoSection {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
 }

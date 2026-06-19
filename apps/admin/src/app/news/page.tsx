@@ -97,6 +97,12 @@ export default function NewsPage() {
           <input type="date" className="input-field" value={announcement.published_at} onChange={(e) => setAnnouncement({ ...announcement, published_at: e.target.value })} />
         </div>
 
+        <div className="form-group" style={{ border: '1px solid var(--border-color)', borderRadius: 8, padding: '1rem', background: '#f9fafb' }}>
+          <label className="form-label">網站預覽</label>
+          <h3 style={{ marginBottom: '0.5rem' }}>{announcement.title || '公告標題'}</h3>
+          <p style={{ color: 'var(--text-secondary)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{announcement.content || '公告內容會依照換行顯示。'}</p>
+        </div>
+
         <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '1.5rem' }}>
           <input type="checkbox" id="visible" checked={announcement.visible} onChange={(e) => setAnnouncement({ ...announcement, visible: e.target.checked })} style={{ width: '1.2rem', height: '1.2rem', accentColor: 'var(--accent-gold)' }} />
           <label htmlFor="visible" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>顯示於官方網站</label>

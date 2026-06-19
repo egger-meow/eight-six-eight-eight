@@ -5,6 +5,16 @@ import * as path from 'path';
 
 const db = new PrismaClient();
 
+const taiwan2026HolidayPeriods = [
+  { name: '2026 元旦', startDate: '2026-01-01', endDate: '2026-01-01' },
+  { name: '2026 農曆春節', startDate: '2026-02-14', endDate: '2026-02-22' },
+  { name: '2026 和平紀念日連假', startDate: '2026-02-27', endDate: '2026-03-01' },
+  { name: '2026 兒童節與清明節連假', startDate: '2026-04-03', endDate: '2026-04-06' },
+  { name: '2026 端午節連假', startDate: '2026-06-19', endDate: '2026-06-21' },
+  { name: '2026 中秋節連假', startDate: '2026-09-25', endDate: '2026-09-27' },
+  { name: '2026 國慶日連假', startDate: '2026-10-09', endDate: '2026-10-11' },
+];
+
 const seededMediaTargets = {
   homepage_hero: [
     { url: '/images/index-page/dex1.jpg', altText: '86.88民宿 大廳' },
@@ -12,6 +22,15 @@ const seededMediaTargets = {
     { url: '/images/index-page/dex3.jpg', altText: '86.88民宿 餐廳' },
     { url: '/images/index-page/dex4.jpg', altText: '86.88民宿 客廳' },
     { url: '/images/exterior/building-1.jpg', altText: '86.88民宿 建築' },
+  ],
+  homepage_8688: [
+    { url: '/images/exterior/building-1.jpg', altText: '86.88民宿外觀' },
+  ],
+  homepage_cats: [
+    { url: '/images/index-page/rgimg3.jpg', altText: '民宿貓咪' },
+  ],
+  homepage_bnb: [
+    { url: '/images/public-spaces/dining-area-1.jpg', altText: '民宿公共空間' },
   ],
   gallery: [
     { url: '/images/exterior/building-1.jpg', altText: '民宿外觀' },
@@ -140,7 +159,29 @@ async function main() {
     }
   }
 
-  // 4. Seed pages
+
+  // 4. Seed editable holiday pricing periods
+  for (const period of taiwan2026HolidayPeriods) {
+    const existing = await db.holidayPeriod.findFirst({
+      where: {
+        name: period.name,
+        startDate: new Date(period.startDate),
+        endDate: new Date(period.endDate),
+      },
+    });
+    if (!existing) {
+      await db.holidayPeriod.create({
+        data: {
+          name: period.name,
+          startDate: new Date(period.startDate),
+          endDate: new Date(period.endDate),
+        },
+      });
+      console.log(`✅ Holiday period ensured: ${period.name}`);
+    }
+  }
+
+  // 5. Seed pages
   const pages = [
     { slug: 'about', titleZh: '關於86.88民宿', titleEn: 'About 86.88 B&B' },
     { slug: 'booking-info', titleZh: '訂房資訊', titleEn: 'Booking Information' },

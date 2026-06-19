@@ -23,6 +23,7 @@ const news_routes_1 = __importDefault(require("./routes/news.routes"));
 const dashboard_routes_1 = __importDefault(require("./routes/dashboard.routes"));
 const webhooks_routes_1 = __importDefault(require("./routes/webhooks.routes"));
 const system_routes_1 = __importDefault(require("./routes/system.routes"));
+const holiday_periods_routes_1 = __importDefault(require("./routes/holiday-periods.routes"));
 const app = (0, express_1.default)();
 if (config_1.config.NODE_ENV === 'production') {
     app.set('trust proxy', 1);
@@ -71,6 +72,7 @@ app.use('/api/v1/blocked-dates', rate_limit_1.generalLimiter, blocked_dates_rout
 app.use('/api/v1/dashboard', rate_limit_1.generalLimiter, dashboard_routes_1.default);
 app.use('/api/v1/webhooks', rate_limit_1.generalLimiter, webhooks_routes_1.default);
 app.use('/api/v1/system', rate_limit_1.generalLimiter, system_routes_1.default);
+app.use('/api/v1/holiday-periods', rate_limit_1.generalLimiter, holiday_periods_routes_1.default);
 // Error Handling
 app.use(error_handler_1.notFoundHandler);
 app.use(error_handler_1.errorHandler);

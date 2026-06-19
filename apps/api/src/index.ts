@@ -19,6 +19,7 @@ import newsRouter from './routes/news.routes';
 import dashboardRouter from './routes/dashboard.routes';
 import webhooksRouter from './routes/webhooks.routes';
 import systemRouter from './routes/system.routes';
+import holidayPeriodsRouter from './routes/holiday-periods.routes';
 
 const app = express();
 
@@ -76,6 +77,7 @@ app.use('/api/v1/blocked-dates', generalLimiter, blockedDatesRouter);
 app.use('/api/v1/dashboard', generalLimiter, dashboardRouter);
 app.use('/api/v1/webhooks', generalLimiter, webhooksRouter);
 app.use('/api/v1/system', generalLimiter, systemRouter);
+app.use('/api/v1/holiday-periods', generalLimiter, holidayPeriodsRouter);
 
 // Error Handling
 app.use(notFoundHandler);

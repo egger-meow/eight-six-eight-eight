@@ -46,6 +46,8 @@ tags:
     description: Reservation management & calendar views
   - name: Blocked Dates
     description: Room availability blocking (maintenance, owner travel, etc.)
+  - name: Holiday Periods
+    description: Editable holiday date ranges for price calculation
   - name: Media
     description: Site-wide image & media management per page/section
   - name: Pages
@@ -650,6 +652,68 @@ components:
           maxLength: 200
       minProperties: 1
 
+
+    # ── Holiday Pricing Periods ────────────────────────────────────────────────
+
+    HolidayPeriod:
+      type: object
+      description: Date range that uses room price_holiday for stay-night pricing.
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 2026 農曆春節
+        start_date:
+          type: string
+          format: date
+          example: '2026-02-14'
+        end_date:
+          type: string
+          format: date
+          example: '2026-02-22'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required: [id, name, start_date, end_date, created_at, updated_at]
+
+    HolidayPeriodCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: 2026 農曆春節
+        start_date:
+          type: string
+          format: date
+          example: '2026-02-14'
+        end_date:
+          type: string
+          format: date
+          example: '2026-02-22'
+      required: [name, start_date, end_date]
+
+    HolidayPeriodUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+      minProperties: 1
+
     # ── Media (Page-level image management) ────────────────────────────────────
 
     MediaItem:
@@ -1249,6 +1313,16 @@ components:
         type: integer
         minimum: 1
       description: Blocked date entry ID
+
+
+    HolidayPeriodIdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: Holiday pricing period ID
 
     DateFromParam:
       name: from

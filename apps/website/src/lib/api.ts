@@ -213,6 +213,24 @@ export async function checkAvailability(
   );
 }
 
+export async function checkAllRoomsAvailability(
+  rooms: WebsiteRoom[],
+  from: string,
+  to: string
+): Promise<Record<string, AvailabilityResult>> {
+  const entries = await Promise.all(
+    rooms.map(async (room) => {
+      try {
+        return [room.slug, await checkAvailability(room.slug, from, to)] as const;
+      } catch {
+        return [room.slug, null] as const;
+      }
+    })
+  );
+
+  return Object.fromEntries(entries.filter((entry): entry is readonly [string, AvailabilityResult] => Boolean(entry[1])));
+}
+
 export async function createBooking(payload: BookingPayload): Promise<BookingResult> {
   return request<BookingResult>('/bookings', {
     method: 'POST',

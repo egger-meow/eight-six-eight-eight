@@ -121,6 +121,7 @@ export default function BookingsPage() {
   }, [selectedBookingId]);
 
   const defaultRoomId = useMemo(() => rooms[0]?.id ? String(rooms[0].id) : '', [rooms]);
+  const selectedBookingIsPast = selectedBooking ? isPastBooking(selectedBooking) : false;
 
   const handleBookingClick = (id: number) => {
     setSelectedBookingId(id);
@@ -339,6 +340,7 @@ export default function BookingsPage() {
               <div>
                 <p className={styles.modalEyebrow}>{selectedBooking ? '訂單資料' : '後台新增'}</p>
                 <h2>{selectedBooking ? '訂單 #' + selectedBooking.id : '新增訂單'}</h2>
+                {selectedBookingIsPast && <div className={styles.pastNotice}>此訂單日期已過，查看或修改時請先確認狀態。</div>}
               </div>
               {selectedBooking && <span className={`${styles.statusPill} ${styles['status-' + selectedBooking.status] || ''}`}>{statusLabels[selectedBooking.status] || selectedBooking.status}</span>}
             </div>
@@ -473,6 +475,13 @@ export default function BookingsPage() {
       )}
     </div>
   );
+}
+
+function isPastBooking(booking: any) {
+  if (!booking?.check_out) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(booking.check_out + 'T00:00:00') < today;
 }
 
 function Info({ label, value }: { label: string; value: React.ReactNode }) {

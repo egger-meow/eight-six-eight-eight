@@ -181,6 +181,10 @@
   line-height: 1.9;
 }
 
+.latestNews p {
+  white-space: pre-line;
+}
+
 .latestNewsDate {
   display: block;
   margin-bottom: 0.5rem;

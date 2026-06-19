@@ -6,6 +6,7 @@ import { BookingCreateSchema, BookingUpdateSchema, BookingNoteSchema } from '../
 import { PaginationQuerySchema, IdParamSchema, DateRangeQuerySchema } from '../schemas/common.schema';
 
 import { db } from '@8688bnb/db';
+import { calculateStayPrice } from '../lib/pricing';
 
 const router = Router();
 
@@ -125,18 +126,7 @@ router.post('/', validate(BookingCreateSchema), async (req, res, next) => {
       return res.status(409).json({ success: false, error: { code: 'BLOCKED_DATE', message: '該時段目前無法預訂' } });
     }
 
-    // Calculate total price
-    let totalPrice = 0;
-    let curr = new Date(checkInDate);
-    while (curr < checkOutDate) {
-      const day = curr.getDay();
-      if (day === 5 || day === 6) {
-        totalPrice += room.priceWeekend;
-      } else {
-        totalPrice += room.priceWeekday;
-      }
-      curr.setDate(curr.getDate() + 1);
-    }
+    const totalPrice = await calculateStayPrice(room, checkInDate, checkOutDate);
 
     const booking = await db.booking.create({
       data: {

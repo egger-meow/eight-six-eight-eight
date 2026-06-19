@@ -6,7 +6,7 @@ import { bookingInfoPage } from '@/data/content';
 import styles from './page.module.css';
 
 export default function BookingInfo() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -27,47 +27,44 @@ export default function BookingInfo() {
 
   return (
     <div className={styles.subPage}>
-      {/* SubPage Header */}
       <div className={styles.pageHeader}>
         <div className="container">
           <div className="reveal">
             <span className="section-label" style={{ color: 'var(--color-gold)' }}>RESERVATION</span>
             <h1 className={styles.title}>{t(bookingInfoPage.h1)}</h1>
             <span className="gold-line center" />
+            <p className={styles.intro}>{t(bookingInfoPage.intro)}</p>
           </div>
         </div>
       </div>
 
       <section className={styles.contentSection}>
-        <div className="container" style={{ maxWidth: '900px' }}>
-          <div className={styles.infoGrid}>
-            {bookingInfoPage.sections.map((section, idx) => (
-              <div 
-                key={idx} 
-                className={`reveal ${styles.infoCard}`} 
-                style={{ transitionDelay: `${idx * 0.1}s` }}
-              >
-                <h2 className={styles.cardTitle}>
-                  <span className={styles.bullet}>•</span>
-                  {t(section.title)}
-                </h2>
-                <ul className={styles.infoList}>
-                  {section.items[useLang().lang].map((item, i) => (
-                    <li key={i}>{item}</li>
-                  ))}
-                </ul>
-              </div>
+        <div className="container">
+          <div className={`reveal ${styles.notice}`}>{t(bookingInfoPage.testNotice)}</div>
+
+          <div className={`reveal ${styles.contactBand}`}>
+            {bookingInfoPage.contacts.map((contact) => (
+              <a key={contact.href} href={contact.href} target={contact.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className={styles.contactLink}>
+                <span>{t(contact.label)}</span>
+                <strong>{contact.value}</strong>
+              </a>
             ))}
           </div>
 
-          <div className={`reveal ${styles.ctaBox}`} style={{ marginTop: '4rem' }}>
-            <a 
-              href="http://line.naver.jp/ti/p/~@gps2290j" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="btn btn-solid"
-            >
-              <span>LINE 預約訂房 / Contact LINE</span>
+          <div className={styles.infoList}>
+            {bookingInfoPage.sections.map((section, idx) => (
+              <section key={idx} className={`reveal ${styles.infoSection}`} style={{ transitionDelay: `${idx * 0.08}s` }}>
+                <h2>{t(section.title)}</h2>
+                <ul>
+                  {section.items[lang].map((item, i) => <li key={i}>{item}</li>)}
+                </ul>
+              </section>
+            ))}
+          </div>
+
+          <div className={`reveal ${styles.ctaBox}`}>
+            <a href="http://line.naver.jp/ti/p/~@gps2290j" target="_blank" rel="noopener noreferrer" className="btn btn-solid">
+              <span>{t(bookingInfoPage.contactAction)}</span>
             </a>
           </div>
         </div>

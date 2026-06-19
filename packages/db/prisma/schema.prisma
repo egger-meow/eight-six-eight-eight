@@ -81,6 +81,17 @@ model BlockedDate {
   room      Room?    @relation(fields: [roomId], references: [id])
 }
 
+model HolidayPeriod {
+  id        Int      @id @default(autoincrement())
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([startDate, endDate])
+}
+
 model Media {
   id               Int      @id @default(autoincrement())
   target           String

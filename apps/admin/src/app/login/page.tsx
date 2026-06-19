@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import styles from './login.module.css';
@@ -11,8 +11,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/');
+    }
+  }, [authLoading, router, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +27,7 @@ export default function LoginPage() {
 
     try {
       await login(username, password);
-      router.push('/');
+      router.replace('/');
     } catch (err: any) {
       setError(err.message || '登入失敗，請檢查帳號密碼。');
     } finally {
@@ -70,9 +76,9 @@ export default function LoginPage() {
           <button 
             type="submit" 
             className={`btn btn-primary ${styles.submitBtn}`}
-            disabled={loading}
+            disabled={loading || authLoading}
           >
-            {loading ? '登入中...' : '登入'}
+            {loading ? '登入中...' : authLoading ? '檢查登入狀態...' : '登入'}
           </button>
         </form>
       </div>

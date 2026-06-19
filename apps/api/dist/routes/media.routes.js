@@ -47,6 +47,7 @@ const validate_1 = require("../middleware/validate");
 const media_schema_1 = require("../schemas/media.schema");
 const common_schema_1 = require("../schemas/common.schema");
 const db_1 = require("@8688bnb/db");
+const media_bootstrap_1 = require("../lib/media-bootstrap");
 const zod_1 = require("zod");
 const router = (0, express_1.Router)();
 // Configure multer for file uploads
@@ -96,6 +97,12 @@ function mapMediaToResponse(m) {
 }
 router.get('/', (0, validate_1.validateQuery)(MediaQuerySchema), async (req, res, next) => {
     try {
+        if (req.query.target) {
+            await (0, media_bootstrap_1.bootstrapMediaTarget)(req.query.target);
+        }
+        else {
+            await (0, media_bootstrap_1.bootstrapKnownMediaTargets)();
+        }
         const page = Number(req.query.page || 1);
         const per_page = Number(req.query.per_page || 20);
         const target = req.query.target;
@@ -124,6 +131,7 @@ router.get('/', (0, validate_1.validateQuery)(MediaQuerySchema), async (req, res
 });
 router.get('/targets', auth_1.requireAdmin, async (req, res, next) => {
     try {
+        await (0, media_bootstrap_1.bootstrapKnownMediaTargets)();
         const rooms = await db_1.db.room.findMany({ select: { slug: true, nameZh: true, nameEn: true } });
         const targets = [
             { target: 'homepage_hero', label_zh: '首頁輪播', label_en: 'Homepage Hero Carousel' },
@@ -253,12 +261,14 @@ router.delete('/:id', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (0, vali
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '圖片不存在' } });
         }
         await db_1.db.media.delete({ where: { id } });
-        const filePath = path.join(__dirname, '../../../../uploads/images', media.filenameStored);
-        fs.unlink(filePath, (err) => {
-            if (err) {
-                console.error(`Failed to delete file from disk: ${filePath}`, err);
-            }
-        });
+        if (media.url.startsWith('/uploads/')) {
+            const filePath = path.join(__dirname, '../../../../uploads/images', media.filenameStored);
+            fs.unlink(filePath, (err) => {
+                if (err) {
+                    console.error(`Failed to delete file from disk: ${filePath}`, err);
+                }
+            });
+        }
         res.json({ success: true, data: { message: '圖片已刪除' } });
     }
     catch (error) {

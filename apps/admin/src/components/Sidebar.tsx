@@ -11,7 +11,8 @@ import {
   Settings, 
   LogOut,
   Building2,
-  CalendarOff
+  CalendarOff,
+  BadgeDollarSign
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { useAuth } from '@/context/AuthContext';
@@ -20,6 +21,7 @@ const navItems = [
   { name: '總覽 Dashboard', href: '/', icon: LayoutDashboard },
   { name: '訂單與行事曆', href: '/bookings', icon: CalendarDays },
   { name: '封鎖日期', href: '/blocked-dates', icon: CalendarOff },
+  { name: '房價設定', href: '/pricing', icon: BadgeDollarSign },
   { name: '公告管理', href: '/news', icon: Newspaper },
   { name: '圖片管理', href: '/media', icon: ImageIcon },
   { name: '系統設定', href: '/settings', icon: Settings },

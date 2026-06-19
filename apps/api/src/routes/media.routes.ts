@@ -10,6 +10,7 @@ import { MediaUpdateSchema, MediaReorderSchema } from '../schemas/media.schema';
 import { IdParamSchema, PaginationQuerySchema } from '../schemas/common.schema';
 
 import { db } from '@8688bnb/db';
+import { bootstrapKnownMediaTargets, bootstrapMediaTarget } from '../lib/media-bootstrap';
 import { z } from 'zod';
 
 const router = Router();
@@ -64,6 +65,11 @@ function mapMediaToResponse(m: any) {
 
 router.get('/', validateQuery(MediaQuerySchema), async (req, res, next) => {
   try {
+    if (req.query.target) {
+      await bootstrapMediaTarget(req.query.target as string);
+    } else {
+      await bootstrapKnownMediaTargets();
+    }
     const page = Number(req.query.page || 1);
     const per_page = Number(req.query.per_page || 20);
     const target = req.query.target as string | undefined;
@@ -95,6 +101,7 @@ router.get('/', validateQuery(MediaQuerySchema), async (req, res, next) => {
 
 router.get('/targets', requireAdmin, async (req, res, next) => {
   try {
+    await bootstrapKnownMediaTargets();
     const rooms = await db.room.findMany({ select: { slug: true, nameZh: true, nameEn: true } });
     const targets = [
       { target: 'homepage_hero', label_zh: '首頁輪播', label_en: 'Homepage Hero Carousel' },
@@ -241,12 +248,14 @@ router.delete('/:id', requireAdmin, doubleCsrfProtection, validateParams(IdParam
 
     await db.media.delete({ where: { id } });
 
-    const filePath = path.join(__dirname, '../../../../uploads/images', media.filenameStored);
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        console.error(`Failed to delete file from disk: ${filePath}`, err);
-      }
-    });
+    if (media.url.startsWith('/uploads/')) {
+      const filePath = path.join(__dirname, '../../../../uploads/images', media.filenameStored);
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error(`Failed to delete file from disk: ${filePath}`, err);
+        }
+      });
+    }
 
     res.json({ success: true, data: { message: '圖片已刪除' } });
   } catch (error) {

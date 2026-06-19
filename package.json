@@ -16,6 +16,7 @@
   },
   "packageManager": "npm@10.9.3",
   "dependencies": {
+    "@openai/codex": "^0.141.0",
     "bcryptjs": "^3.0.3"
   }
 }

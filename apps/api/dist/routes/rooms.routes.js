@@ -7,6 +7,8 @@ const validate_1 = require("../middleware/validate");
 const rooms_schema_1 = require("../schemas/rooms.schema");
 const common_schema_1 = require("../schemas/common.schema");
 const db_1 = require("@8688bnb/db");
+const pricing_1 = require("../lib/pricing");
+const media_bootstrap_1 = require("../lib/media-bootstrap");
 const router = (0, express_1.Router)();
 function mapRoomToResponse(room) {
     return {
@@ -44,6 +46,7 @@ function mapMediaToResponse(m) {
 }
 router.get('/', async (req, res, next) => {
     try {
+        await (0, media_bootstrap_1.bootstrapKnownMediaTargets)();
         const rooms = await db_1.db.room.findMany({
             orderBy: { sortOrder: 'asc' }
         });
@@ -102,6 +105,7 @@ router.post('/', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (0, validate_
 });
 router.get('/:slug', (0, validate_1.validateParams)(common_schema_1.SlugParamSchema), async (req, res, next) => {
     try {
+        await (0, media_bootstrap_1.bootstrapMediaTarget)(`room_${req.params.slug}`);
         const room = await db_1.db.room.findUnique({
             where: { slug: req.params.slug }
         });
@@ -245,18 +249,7 @@ router.get('/:slug/availability', (0, validate_1.validateParams)(common_schema_1
             });
         }
         const available = conflicts.length === 0;
-        let estimatedPrice = 0;
-        let curr = new Date(from);
-        while (curr < to) {
-            const day = curr.getDay();
-            if (day === 5 || day === 6) {
-                estimatedPrice += room.priceWeekend;
-            }
-            else {
-                estimatedPrice += room.priceWeekday;
-            }
-            curr.setDate(curr.getDate() + 1);
-        }
+        const estimatedPrice = await (0, pricing_1.calculateStayPrice)(room, from, to);
         res.json({
             success: true,
             data: {

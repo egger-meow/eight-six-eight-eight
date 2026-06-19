@@ -141,3 +141,33 @@ a {
   color: var(--text-secondary);
   margin-bottom: 0.5rem;
 }
+
+
+@media (max-width: 860px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .main-content {
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .page-content {
+    padding: 1rem;
+    overflow: visible;
+  }
+
+  .card {
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .btn {
+    min-height: 42px;
+  }
+
+  table {
+    min-width: 680px;
+  }
+}

@@ -98,23 +98,34 @@ export default function BookingList({ refreshKey, onBookingClick }: BookingListP
             ) : visibleBookings.length === 0 ? (
               <tr><td colSpan={5} style={{ padding: '2rem', textAlign: 'center' }}>查無訂單</td></tr>
             ) : (
-              visibleBookings.map(b => (
+              visibleBookings.map(b => {
+                const past = isPastBooking(b);
+                return (
                 <tr
                   key={b.id}
-                  style={{ borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
+                  style={{ borderBottom: '1px solid var(--border-color)', cursor: 'pointer', background: past ? '#f9fafb' : undefined, color: past ? 'var(--text-secondary)' : undefined }}
                   onClick={() => onBookingClick(b.id)}
                 >
-                  <td style={{ padding: '1rem' }}>{b.check_in} ~ {b.check_out}</td>
+                  <td style={{ padding: '1rem' }}>{b.check_in} ~ {b.check_out}{past && <span style={{ display: 'inline-flex', marginLeft: '0.5rem', padding: '0.15rem 0.45rem', borderRadius: 999, background: 'rgba(107,114,128,0.14)', color: 'var(--status-gray)', fontSize: '0.75rem', fontWeight: 700 }}>已過期</span>}</td>
                   <td style={{ padding: '1rem' }}>{b.room?.name_zh || `房型 #${b.room_id}`}</td>
                   <td style={{ padding: '1rem' }}>{b.guest_name}<br /><span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{b.guest_phone}</span></td>
                   <td style={{ padding: '1rem' }}>NT$ {(b.total_price || 0).toLocaleString()}</td>
                   <td style={{ padding: '1rem' }}>{statusLabels[b.status] || b.status}</td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
     </div>
   );
+}
+
+
+function isPastBooking(booking: any) {
+  if (!booking?.check_out) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return new Date(booking.check_out + 'T00:00:00') < today;
 }

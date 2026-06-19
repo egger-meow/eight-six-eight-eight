@@ -98,3 +98,38 @@
   background-color: rgba(239, 68, 68, 0.2);
   color: var(--status-red);
 }
+
+
+@media (max-width: 860px) {
+  .sidebar {
+    width: 100%;
+    position: sticky;
+    top: 0;
+    max-height: none;
+  }
+
+  .logoContainer {
+    padding: 0.9rem 1rem;
+  }
+
+  .navList {
+    flex-direction: row;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.75rem 1rem;
+  }
+
+  .navItem {
+    padding: 0;
+    flex: 0 0 auto;
+  }
+
+  .navLink {
+    white-space: nowrap;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .footer {
+    display: none;
+  }
+}

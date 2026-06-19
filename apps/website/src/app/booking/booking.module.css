@@ -139,6 +139,36 @@
   box-shadow: var(--shadow-md);
 }
 
+.roomCard:disabled {
+  cursor: not-allowed;
+}
+
+.unavailableRoom {
+  background: #f2f2f2;
+  border-color: #d6d6d6;
+  color: #8b8b8b;
+  box-shadow: none;
+  opacity: 0.72;
+}
+
+.unavailableRoom:hover,
+.unavailableRoom:focus-visible {
+  transform: none;
+  border-color: #d6d6d6;
+  box-shadow: none;
+}
+
+.unavailableRoom .roomName,
+.unavailableRoom .roomCapacity {
+  color: #777;
+}
+
+.availabilityHint {
+  margin: -0.25rem 0 1rem;
+  color: var(--color-ink-soft);
+  font-size: 0.95rem;
+}
+
 .roomCard.selected {
   border-color: var(--color-gold-dark);
   background-color: var(--color-cream);
@@ -274,4 +304,90 @@
   .totalPrice {
     text-align: left;
   }
+}
+
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(30, 24, 18, 0.62);
+}
+
+.modalCard {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-radius: 8px;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+.modalCard h2 {
+  font-family: var(--font-zh);
+  font-size: 1.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.modalWarning {
+  padding: 0.85rem 1rem;
+  border: 1px solid #d8bd78;
+  border-radius: 6px;
+  background: #fff8e6;
+  color: #665018;
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+
+.modalSummary {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.modalSummary div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.35fr) 1fr;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modalSummary span {
+  color: var(--color-ink-soft);
+}
+
+.modalSummary strong {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.messagePreview {
+  max-height: 46vh;
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-ink);
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.7;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.modalActions button {
+  min-width: 150px;
+  justify-content: center;
 }

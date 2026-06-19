@@ -5,6 +5,8 @@ import { apiFetch, API_ORIGIN } from '@/lib/api';
 import styles from './media.module.css';
 import { UploadCloud, Trash2, GripHorizontal, Image as ImageIcon } from 'lucide-react';
 
+const WEBSITE_ORIGIN = (process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://8688bnb.com').replace(/\/$/, '');
+
 export default function MediaPage() {
   const [targets, setTargets] = useState<any[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<string>('homepage_hero');
@@ -83,7 +85,11 @@ export default function MediaPage() {
   };
 
   const getTargetLabel = (targetId: string) => targets.find(t => t.target === targetId)?.label_zh || targetId;
-  const imageUrl = (url: string) => url.startsWith('http') ? url : `${API_ORIGIN}${url}`;
+  const imageUrl = (url: string) => {
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/images/')) return `${WEBSITE_ORIGIN}${url}`;
+    return `${API_ORIGIN}${url}`;
+  };
 
   return (
     <div className={styles.mediaContainer}>

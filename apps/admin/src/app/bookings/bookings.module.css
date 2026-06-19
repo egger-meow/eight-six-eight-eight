@@ -86,6 +86,17 @@
   font-weight: 700;
 }
 
+.pastNotice {
+  display: inline-flex;
+  margin-top: 0.6rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(107, 114, 128, 0.14);
+  color: var(--status-gray);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .statusPill {
   display: inline-flex;
   align-items: center;

@@ -6,6 +6,8 @@ import { RoomCreateSchema, RoomUpdateSchema } from '../schemas/rooms.schema';
 import { DateRangeQuerySchema, SlugParamSchema } from '../schemas/common.schema';
 
 import { db } from '@8688bnb/db';
+import { calculateStayPrice } from '../lib/pricing';
+import { bootstrapKnownMediaTargets, bootstrapMediaTarget } from '../lib/media-bootstrap';
 
 const router = Router();
 
@@ -47,6 +49,7 @@ function mapMediaToResponse(m: any) {
 
 router.get('/', async (req, res, next) => {
   try {
+    await bootstrapKnownMediaTargets();
     const rooms = await db.room.findMany({
       orderBy: { sortOrder: 'asc' }
     });
@@ -112,6 +115,7 @@ router.post('/', requireAdmin, doubleCsrfProtection, validate(RoomCreateSchema),
 
 router.get('/:slug', validateParams(SlugParamSchema), async (req, res, next) => {
   try {
+    await bootstrapMediaTarget(`room_${req.params.slug}`);
     const room = await db.room.findUnique({
       where: { slug: req.params.slug }
     });
@@ -259,17 +263,7 @@ router.get('/:slug/availability', validateParams(SlugParamSchema), validateQuery
 
     const available = conflicts.length === 0;
 
-    let estimatedPrice = 0;
-    let curr = new Date(from);
-    while (curr < to) {
-      const day = curr.getDay();
-      if (day === 5 || day === 6) {
-        estimatedPrice += room.priceWeekend;
-      } else {
-        estimatedPrice += room.priceWeekday;
-      }
-      curr.setDate(curr.getDate() + 1);
-    }
+    const estimatedPrice = await calculateStayPrice(room, from, to);
 
     res.json({
       success: true,
