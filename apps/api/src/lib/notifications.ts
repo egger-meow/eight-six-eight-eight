@@ -427,7 +427,7 @@ function emailHtml(payload: BookingNotificationPayload) {
     ['LINE ID', payload.guest_line_id || '未填寫'],
     ['人數', `${payload.guest_count}`],
     ['金額', formatMoney(payload.total_price)],
-    ['狀態', payload.status],
+    ['狀態', formatStatus(payload.status)],
     ['備註', payload.notes_summary || '無'],
   ];
 
