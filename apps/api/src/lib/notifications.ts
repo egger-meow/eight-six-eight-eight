@@ -61,6 +61,42 @@ function formatMoney(value: number | null) {
   return value === null ? '未填寫' : `NT$ ${value.toLocaleString('zh-TW')}`;
 }
 
+function formatSource(value: string) {
+  const labels: Record<string, string> = {
+    website: '官網',
+    line: 'LINE',
+    agoda: 'Agoda',
+    booking: 'Booking.com',
+    direct: '直接訂房',
+    admin: '後台',
+    ota: 'OTA',
+  };
+  return labels[value] || value;
+}
+
+function formatStatus(value: string) {
+  const labels: Record<string, string> = {
+    pending: '待確認',
+    confirmed: '已確認',
+    cancelled: '已取消',
+    checked_in: '已入住',
+    checked_out: '已退房',
+    no_show: '未入住',
+  };
+  return labels[value] || value;
+}
+
+function formatEventType(value: BookingEventType) {
+  const labels: Record<BookingEventType, string> = {
+    'booking.created': '新訂房',
+    'booking.modified': '訂房更新',
+    'booking.confirmed': '訂房已確認',
+    'booking.cancelled': '訂房已取消',
+    'ota.processing_failed': 'OTA 處理失敗',
+  };
+  return labels[value];
+}
+
 function bookingAdminUrl(bookingId: number) {
   return `${config.PUBLIC_ADMIN_URL.replace(/\/$/, '')}/bookings?booking=${bookingId}`;
 }
@@ -86,10 +122,17 @@ function buildBookingPayload(booking: BookingWithRoom, eventType: BookingEventTy
 }
 
 function channelsForEvent(args: CreateBookingNotificationArgs): NotificationChannel[] {
-  if (args.eventType === 'booking.created' && args.source === 'line' && args.actorLineAdminId) {
-    return ['email'];
+  const channels: NotificationChannel[] = [];
+
+  if (!(args.eventType === 'booking.created' && args.source === 'line' && args.actorLineAdminId)) {
+    channels.push('line');
   }
-  return ['line', 'email'];
+
+  if (args.eventType === 'booking.created' && args.source === 'website') {
+    channels.push('email');
+  }
+
+  return channels;
 }
 
 export async function createBookingNotificationEvent(args: CreateBookingNotificationArgs) {
@@ -254,10 +297,10 @@ async function sendLineNotification(payload: BookingNotificationPayload) {
 }
 
 function lineFlexMessage(payload: BookingNotificationPayload) {
-  const title = payload.event_type === 'booking.created' ? '新訂房通知' : '訂房更新通知';
+  const title = payload.event_type === 'booking.created' && payload.source === 'website' ? '官網訂房通知' : formatEventType(payload.event_type);
   const rows = [
     ['訂單', `#${payload.booking_id}`],
-    ['來源', payload.source],
+    ['來源', formatSource(payload.source)],
     ['房型', payload.room],
     ['入住', `${payload.check_in} ~ ${payload.check_out}`],
     ['房客', payload.guest_name],
@@ -265,7 +308,7 @@ function lineFlexMessage(payload: BookingNotificationPayload) {
     ['人數', `${payload.guest_count} 人`],
     ['LINE ID', payload.guest_line_id || '未填寫'],
     ['金額', formatMoney(payload.total_price)],
-    ['狀態', payload.status],
+    ['狀態', formatStatus(payload.status)],
     ['備註', payload.notes_summary || '無'],
   ];
 
@@ -343,15 +386,13 @@ async function sendEmailNotification(payload: BookingNotificationPayload) {
 }
 
 function emailSubject(payload: BookingNotificationPayload) {
-  const action = payload.event_type === 'booking.created' ? '新訂房' : '訂房更新';
-  return `[86.88 B&B] ${action} #${payload.booking_id} ${payload.check_in} ${payload.guest_name}`;
+  return `官網訂房通知 #${payload.booking_id} ${payload.check_in} ${payload.guest_name}`;
 }
 
 function emailText(payload: BookingNotificationPayload) {
   return [
     `訂單：#${payload.booking_id}`,
-    `事件：${payload.event_type}`,
-    `來源：${payload.source}`,
+    `來源：${formatSource(payload.source)}`,
     `房型：${payload.room}`,
     `入住 / 退房：${payload.check_in} ~ ${payload.check_out}`,
     `房客：${payload.guest_name}`,
@@ -359,7 +400,7 @@ function emailText(payload: BookingNotificationPayload) {
     `LINE ID：${payload.guest_line_id || '未填寫'}`,
     `人數：${payload.guest_count}`,
     `金額：${formatMoney(payload.total_price)}`,
-    `狀態：${payload.status}`,
+    `狀態：${formatStatus(payload.status)}`,
     `備註：${payload.notes_summary || '無'}`,
     `後台：${payload.admin_url}`,
   ].join('\n');
@@ -378,8 +419,7 @@ function escapeHtml(value: string) {
 function emailHtml(payload: BookingNotificationPayload) {
   const rows = [
     ['訂單', `#${payload.booking_id}`],
-    ['事件', payload.event_type],
-    ['來源', payload.source],
+    ['來源', formatSource(payload.source)],
     ['房型', payload.room],
     ['入住 / 退房', `${payload.check_in} ~ ${payload.check_out}`],
     ['房客', payload.guest_name],
@@ -391,5 +431,5 @@ function emailHtml(payload: BookingNotificationPayload) {
     ['備註', payload.notes_summary || '無'],
   ];
 
-  return `<!doctype html><html><body><h1>86.88 B&B 訂房通知</h1><table cellpadding="6" cellspacing="0" border="1">${rows.map(([label, value]) => `<tr><th align="left">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}</table><p><a href="${escapeHtml(payload.admin_url)}">開啟後台訂單</a></p></body></html>`;
+  return `<!doctype html><html><body><h1>官網訂房通知</h1><table cellpadding="6" cellspacing="0" border="1">${rows.map(([label, value]) => `<tr><th align="left">${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join('')}</table><p><a href="${escapeHtml(payload.admin_url)}">開啟後台訂單</a></p></body></html>`;
 }
