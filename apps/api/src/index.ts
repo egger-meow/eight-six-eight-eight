@@ -20,6 +20,8 @@ import dashboardRouter from './routes/dashboard.routes';
 import webhooksRouter from './routes/webhooks.routes';
 import systemRouter from './routes/system.routes';
 import holidayPeriodsRouter from './routes/holiday-periods.routes';
+import lineAdminRouter, { lineAdminWebhookRouter } from './routes/line-admin.routes';
+import { startNotificationWorker, stopNotificationWorker } from './lib/notifications';
 
 const app = express();
 
@@ -33,6 +35,8 @@ app.use(cors({
   origin: config.CORS_ORIGIN.split(','),
   credentials: true
 }));
+
+app.use('/api/v1/line/admin/webhook', generalLimiter, lineAdminWebhookRouter);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -76,6 +80,7 @@ app.use('/api/v1/bookings', generalLimiter, bookingsRouter);
 app.use('/api/v1/blocked-dates', generalLimiter, blockedDatesRouter);
 app.use('/api/v1/dashboard', generalLimiter, dashboardRouter);
 app.use('/api/v1/webhooks', generalLimiter, webhooksRouter);
+app.use('/api/v1/line', generalLimiter, lineAdminRouter);
 app.use('/api/v1/system', generalLimiter, systemRouter);
 app.use('/api/v1/holiday-periods', generalLimiter, holidayPeriodsRouter);
 
@@ -87,14 +92,16 @@ app.use(errorHandler);
 const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
 if (process.env.NODE_ENV !== 'test') {
   app.listen(config.API_PORT, HOST, () => {
-    console.log(`🚀 API Server listening on http://${HOST}:${config.API_PORT}`);
+    console.log(`API Server listening on http://${HOST}:${config.API_PORT}`);
     console.log(`   Environment: ${config.NODE_ENV}`);
   });
+  void startNotificationWorker();
 }
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received: closing HTTP server');
+  stopNotificationWorker();
   await redisClient.quit();
   process.exit(0);
 });

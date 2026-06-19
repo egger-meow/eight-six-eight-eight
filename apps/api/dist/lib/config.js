@@ -37,6 +37,16 @@ exports.config = void 0;
 exports.getSecureSecret = getSecureSecret;
 const zod_1 = require("zod");
 const crypto = __importStar(require("crypto"));
+const booleanEnv = zod_1.z.preprocess((value) => {
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['true', '1', 'yes', 'on'].includes(normalized))
+            return true;
+        if (['false', '0', 'no', 'off', ''].includes(normalized))
+            return false;
+    }
+    return value;
+}, zod_1.z.boolean());
 const envSchema = zod_1.z.object({
     NODE_ENV: zod_1.z.enum(['development', 'production', 'test']).default('development'),
     API_PORT: zod_1.z.coerce.number().default(3333),
@@ -47,6 +57,21 @@ const envSchema = zod_1.z.object({
     WEBHOOK_API_KEY: zod_1.z.string().optional(),
     REDIS_URL: zod_1.z.string().default('redis://localhost:6379'),
     DATABASE_URL: zod_1.z.string().url().optional(),
+    PUBLIC_ADMIN_URL: zod_1.z.string().url().default('https://admin.8688bnb.com'),
+    LINE_CHANNEL_SECRET: zod_1.z.string().optional(),
+    LINE_CHANNEL_ACCESS_TOKEN: zod_1.z.string().optional(),
+    LINE_ADMIN_OWNER_USER_IDS: zod_1.z.string().default(''),
+    LINE_ADMIN_DEVELOPER_USER_IDS: zod_1.z.string().default(''),
+    LINE_BINDING_CODE_TTL_MINUTES: zod_1.z.coerce.number().default(30),
+    NOTIFICATION_WORKER_ENABLED: booleanEnv.default(true),
+    NOTIFICATION_WORKER_INTERVAL_MS: zod_1.z.coerce.number().default(15000),
+    SMTP_HOST: zod_1.z.string().optional(),
+    SMTP_PORT: zod_1.z.coerce.number().default(587),
+    SMTP_SECURE: booleanEnv.default(false),
+    SMTP_USER: zod_1.z.string().optional(),
+    SMTP_PASSWORD: zod_1.z.string().optional(),
+    SMTP_FROM: zod_1.z.string().default('86.88 B&B <no-reply@8688bnb.com>'),
+    BOOKING_NOTIFICATION_EMAILS: zod_1.z.string().default(''),
 });
 const env = envSchema.safeParse(process.env);
 if (!env.success) {

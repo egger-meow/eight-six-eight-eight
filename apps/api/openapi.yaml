@@ -58,6 +58,8 @@ tags:
     description: Admin dashboard stats & overview
   - name: Webhooks
     description: Unified OTA channel manager webhook
+  - name: LINE Admin
+    description: LINE bot webhook and explicit administrator binding
   - name: System
     description: Health checks & system info
 
@@ -88,6 +90,11 @@ components:
       description: |
         API key for authenticating incoming OTA channel manager webhooks.
         Configured in the WEBHOOK_API_KEY environment variable.
+    lineSignature:
+      type: apiKey
+      in: header
+      name: x-line-signature
+      description: LINE channel signature over the exact raw request body.
 
   # ─── Reusable Schemas ────────────────────────────────────────────────────────
   schemas:
@@ -1035,6 +1042,88 @@ components:
             For cancel_booking: { reason, ... }
             Stored as-is in the webhook log.
       required: [event_type, platform]
+
+
+    # ── LINE Admin and Notifications ──────────────────────────────────────────
+
+    LineAdmin:
+      type: object
+      properties:
+        id:
+          type: integer
+        line_user_id:
+          type: string
+        display_name:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [owner, developer]
+        active:
+          type: boolean
+        valid_line_user_id:
+          type: boolean
+        notification_eligible:
+          type: boolean
+        bound_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, line_user_id, role, active, valid_line_user_id, notification_eligible, bound_at]
+
+    LineBindingCodeCreateRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [owner, developer]
+          default: developer
+
+    LineBindingCode:
+      type: object
+      properties:
+        id:
+          type: integer
+        role:
+          type: string
+          enum: [owner, developer]
+        code:
+          type: string
+          description: One-time plaintext code returned only at creation time.
+        expires_at:
+          type: string
+          format: date-time
+      required: [id, role, code, expires_at]
+
+    NotificationDelivery:
+      type: object
+      properties:
+        id:
+          type: integer
+        event_id:
+          type: integer
+        channel:
+          type: string
+          enum: [line, email]
+        status:
+          type: string
+          enum: [pending, processing, retrying, sent, failed]
+        attempts:
+          type: integer
+        next_attempt_at:
+          type: string
+          format: date-time
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_error:
+          type: string
+          nullable: true
+      required: [id, event_id, channel, status, attempts, next_attempt_at]
 
     # ── Dashboard ──────────────────────────────────────────────────────────────
 
@@ -3293,6 +3382,187 @@ paths:
                 required: [success, data]
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # LINE ADMIN BOT
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  /line/admin/webhook:
+    post:
+      tags: [LINE Admin]
+      operationId: receiveLineAdminWebhook
+      summary: Receive LINE admin bot webhook
+      description: |
+        Validates `x-line-signature` against the exact raw body before JSON parsing.
+        Supports LINE verification payloads with an empty `events` array.
+        Only direct one-to-one user events are processed; group and room events are ignored.
+      security:
+        - lineSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  items:
+                    type: object
+                    additionalProperties: true
+              required: [events]
+      responses:
+        '200':
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          description: Missing or invalid LINE signature
+
+  /line/admin/binding-codes:
+    post:
+      tags: [LINE Admin]
+      operationId: createLineBindingCode
+      summary: Create one-time LINE admin binding code
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineBindingCodeCreateRequest'
+      responses:
+        '201':
+          description: Binding code created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/LineBindingCode'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /line/admin/admins:
+    get:
+      tags: [LINE Admin]
+      operationId: listLineAdmins
+      summary: List explicit LINE administrators
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: LINE administrator list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LineAdmin'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+
+  /line/admin/notification-deliveries:
+    get:
+      tags: [LINE Admin]
+      operationId: listNotificationDeliveries
+      summary: Inspect notification delivery rows
+      description: Authenticated admin endpoint for pending, retrying, failed, and sent LINE/email delivery records.
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, processing, retrying, sent, failed]
+      responses:
+        '200':
+          description: Notification delivery list
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+
+  /line/admin/notification-deliveries/{id}/retry:
+    put:
+      tags: [LINE Admin]
+      operationId: retryNotificationDelivery
+      summary: Retry one notification delivery immediately
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Delivery queued for immediate retry
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /line/admin/audit-logs:
+    get:
+      tags: [LINE Admin]
+      operationId: listLineAuditLogs
+      summary: Inspect LINE administrator mutation audit logs
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: LINE audit log list
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /line/admin/admins/{id}/revoke:
+    put:
+      tags: [LINE Admin]
+      operationId: revokeLineDeveloper
+      summary: Revoke a developer LINE administrator
+      description: Owner LINE access is protected and cannot be revoked by this endpoint.
+      security:
+        - cookieAuth: []
+          csrfToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Developer access revoked
+        '403':
+          description: Owner access cannot be revoked here
         '404':
           $ref: '#/components/responses/NotFound'
 

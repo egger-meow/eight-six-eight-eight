@@ -8,6 +8,8 @@ const bookings_schema_1 = require("../schemas/bookings.schema");
 const common_schema_1 = require("../schemas/common.schema");
 const db_1 = require("@8688bnb/db");
 const pricing_1 = require("../lib/pricing");
+const notifications_1 = require("../lib/notifications");
+const booking_rules_1 = require("../lib/booking-rules");
 const router = (0, express_1.Router)();
 function mapBookingToResponse(b) {
     return {
@@ -67,68 +69,48 @@ router.get('/', auth_1.requireAdmin, (0, validate_1.validateQuery)(common_schema
 router.post('/', (0, validate_1.validate)(bookings_schema_1.BookingCreateSchema), async (req, res, next) => {
     try {
         const data = req.body;
-        // Check room exists
-        const room = await db_1.db.room.findUnique({ where: { id: data.room_id } });
-        if (!room) {
-            return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '房型不存在' } });
-        }
         const checkInDate = new Date(data.check_in);
         const checkOutDate = new Date(data.check_out);
-        if (checkOutDate <= checkInDate) {
-            return res.status(400).json({ success: false, error: { code: 'INVALID_DATE_RANGE', message: '退房日期必須晚於入住日期' } });
-        }
-        if (!room.available) {
-            return res.status(409).json({ success: false, error: { code: 'ROOM_UNAVAILABLE', message: '此房型目前未開放預訂' } });
-        }
-        if (data.guest_count > room.capacity) {
-            return res.status(400).json({ success: false, error: { code: 'CAPACITY_EXCEEDED', message: '入住人數超過房型可容納人數' } });
-        }
-        // Check availability
-        const conflict = await db_1.db.booking.findFirst({
-            where: {
-                roomId: data.room_id,
-                status: { notIn: ['cancelled', 'no_show'] },
-                AND: [
-                    { checkIn: { lt: checkOutDate } },
-                    { checkOut: { gt: checkInDate } }
-                ]
-            }
+        const validation = await (0, booking_rules_1.validateBookingMutation)({
+            roomId: data.room_id,
+            checkIn: checkInDate,
+            checkOut: checkOutDate,
+            guestCount: data.guest_count,
         });
-        if (conflict) {
-            return res.status(409).json({ success: false, error: { code: 'CONFLICT', message: '該時段已被預訂' } });
+        if (validation.error) {
+            return res.status(validation.error.status).json({ success: false, error: { code: validation.error.code, message: validation.error.message } });
         }
-        const blockedConflict = await db_1.db.blockedDate.findFirst({
-            where: {
-                OR: [
-                    { roomId: data.room_id },
-                    { roomId: null }
-                ],
-                AND: [
-                    { startDate: { lte: checkOutDate } },
-                    { endDate: { gte: checkInDate } }
-                ]
-            }
-        });
-        if (blockedConflict) {
-            return res.status(409).json({ success: false, error: { code: 'BLOCKED_DATE', message: '該時段目前無法預訂' } });
-        }
+        const room = validation.room;
         const totalPrice = await (0, pricing_1.calculateStayPrice)(room, checkInDate, checkOutDate);
-        const booking = await db_1.db.booking.create({
-            data: {
-                roomId: data.room_id,
-                checkIn: checkInDate,
-                checkOut: checkOutDate,
-                guestName: data.guest_name,
-                guestPhone: data.guest_phone,
-                guestLineId: data.guest_line_id || null,
-                guestCount: data.guest_count,
-                notes: data.notes || null,
-                totalPrice,
-                status: 'pending',
-                source: 'website'
-            },
-            include: { room: true }
+        let notificationEventId = null;
+        const booking = await db_1.db.$transaction(async (tx) => {
+            const created = await tx.booking.create({
+                data: {
+                    roomId: data.room_id,
+                    checkIn: checkInDate,
+                    checkOut: checkOutDate,
+                    guestName: data.guest_name,
+                    guestPhone: data.guest_phone,
+                    guestLineId: data.guest_line_id || null,
+                    guestCount: data.guest_count,
+                    notes: data.notes || null,
+                    totalPrice,
+                    status: 'pending',
+                    source: 'website'
+                },
+                include: { room: true }
+            });
+            notificationEventId = await (0, notifications_1.createBookingNotificationEvent)({
+                tx,
+                booking: created,
+                eventType: 'booking.created',
+                dedupeKey: `booking.created:${created.id}`,
+                source: 'website',
+            });
+            return created;
         });
+        if (notificationEventId)
+            (0, notifications_1.kickNotificationWorker)();
         res.status(201).json({ success: true, data: mapBookingToResponse(booking) });
     }
     catch (error) {
@@ -292,33 +274,42 @@ router.put('/:id', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (0, validat
             updateData.otaPlatform = data.ota_platform;
         if (data.ota_booking_id !== undefined)
             updateData.otaBookingId = data.ota_booking_id;
-        if (updateData.roomId || updateData.checkIn || updateData.checkOut) {
+        if (updateData.roomId || updateData.checkIn || updateData.checkOut || updateData.guestCount) {
             const roomId = updateData.roomId || existingBooking.roomId;
             const checkIn = updateData.checkIn || existingBooking.checkIn;
             const checkOut = updateData.checkOut || existingBooking.checkOut;
-            const conflict = await db_1.db.booking.findFirst({
-                where: {
-                    id: { not: id },
-                    roomId,
-                    status: { notIn: ['cancelled', 'no_show'] },
-                    AND: [
-                        { checkIn: { lt: checkOut } },
-                        { checkOut: { gt: checkIn } }
-                    ]
-                }
-            });
-            if (conflict) {
-                return res.status(409).json({ success: false, error: { code: 'CONFLICT', message: '該時段已被預訂' } });
+            const guestCount = updateData.guestCount || existingBooking.guestCount;
+            const validation = await (0, booking_rules_1.validateBookingMutation)({ bookingId: id, roomId, checkIn, checkOut, guestCount });
+            if (validation.error) {
+                return res.status(validation.error.status).json({ success: false, error: { code: validation.error.code, message: validation.error.message } });
             }
         }
-        const updatedBooking = await db_1.db.booking.update({
-            where: { id },
-            data: updateData,
-            include: {
-                room: true,
-                internalNotes: { orderBy: { createdAt: 'desc' } }
-            }
+        let notificationEventId = null;
+        const eventType = data.status === 'confirmed' && existingBooking.status !== 'confirmed'
+            ? 'booking.confirmed'
+            : data.status === 'cancelled' && existingBooking.status !== 'cancelled'
+                ? 'booking.cancelled'
+                : 'booking.modified';
+        const updatedBooking = await db_1.db.$transaction(async (tx) => {
+            const updated = await tx.booking.update({
+                where: { id },
+                data: updateData,
+                include: {
+                    room: true,
+                    internalNotes: { orderBy: { createdAt: 'desc' } }
+                }
+            });
+            notificationEventId = await (0, notifications_1.createBookingNotificationEvent)({
+                tx,
+                booking: updated,
+                eventType,
+                dedupeKey: `${eventType}:${id}:${Date.now()}`,
+                source: updated.source,
+            });
+            return updated;
         });
+        if (notificationEventId)
+            (0, notifications_1.kickNotificationWorker)();
         res.json({ success: true, data: mapBookingToResponse(updatedBooking) });
     }
     catch (error) {
@@ -328,11 +319,23 @@ router.put('/:id', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (0, validat
 router.delete('/:id', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (0, validate_1.validateParams)(common_schema_1.IdParamSchema), async (req, res, next) => {
     try {
         const id = Number(req.params.id);
-        const existingBooking = await db_1.db.booking.findUnique({ where: { id } });
+        const existingBooking = await db_1.db.booking.findUnique({ where: { id }, include: { room: true } });
         if (!existingBooking) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '預約不存在' } });
         }
-        await db_1.db.booking.delete({ where: { id } });
+        let notificationEventId = null;
+        await db_1.db.$transaction(async (tx) => {
+            notificationEventId = await (0, notifications_1.createBookingNotificationEvent)({
+                tx,
+                booking: { ...existingBooking, status: 'cancelled' },
+                eventType: 'booking.cancelled',
+                dedupeKey: `booking.cancelled:${id}:delete:${Date.now()}`,
+                source: existingBooking.source,
+            });
+            await tx.booking.delete({ where: { id } });
+        });
+        if (notificationEventId)
+            (0, notifications_1.kickNotificationWorker)();
         res.json({ success: true, data: { message: '預約已刪除' } });
     }
     catch (error) {

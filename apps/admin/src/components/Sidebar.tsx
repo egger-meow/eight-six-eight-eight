@@ -12,7 +12,8 @@ import {
   LogOut,
   Building2,
   CalendarOff,
-  BadgeDollarSign
+  BadgeDollarSign,
+  MessageCircle
 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import { useAuth } from '@/context/AuthContext';
@@ -24,6 +25,7 @@ const navItems = [
   { name: '房價設定', href: '/pricing', icon: BadgeDollarSign },
   { name: '公告管理', href: '/news', icon: Newspaper },
   { name: '圖片管理', href: '/media', icon: ImageIcon },
+  { name: 'LINE 管理', href: '/line', icon: MessageCircle },
   { name: '系統設定', href: '/settings', icon: Settings },
 ];
 

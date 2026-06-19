@@ -3,6 +3,15 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const booleanEnv = z.preprocess((value) => {
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+    if (['false', '0', 'no', 'off', ''].includes(normalized)) return false;
+  }
+  return value;
+}, z.boolean());
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   API_PORT: z.coerce.number().default(3333),
@@ -13,6 +22,21 @@ const envSchema = z.object({
   WEBHOOK_API_KEY: z.string().optional(),
   REDIS_URL: z.string().default('redis://localhost:6379'),
   DATABASE_URL: z.string().url().optional(),
+  PUBLIC_ADMIN_URL: z.string().url().default('https://admin.8688bnb.com'),
+  LINE_CHANNEL_SECRET: z.string().optional(),
+  LINE_CHANNEL_ACCESS_TOKEN: z.string().optional(),
+  LINE_ADMIN_OWNER_USER_IDS: z.string().default(''),
+  LINE_ADMIN_DEVELOPER_USER_IDS: z.string().default(''),
+  LINE_BINDING_CODE_TTL_MINUTES: z.coerce.number().default(30),
+  NOTIFICATION_WORKER_ENABLED: booleanEnv.default(true),
+  NOTIFICATION_WORKER_INTERVAL_MS: z.coerce.number().default(15000),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: booleanEnv.default(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().default('86.88 B&B <no-reply@8688bnb.com>'),
+  BOOKING_NOTIFICATION_EMAILS: z.string().default(''),
 });
 
 const env = envSchema.safeParse(process.env);

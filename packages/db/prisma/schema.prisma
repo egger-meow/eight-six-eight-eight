@@ -57,6 +57,7 @@ model Booking {
 
   room           Room     @relation(fields: [roomId], references: [id])
   internalNotes  BookingNote[]
+  notificationEvents NotificationEvent[]
 }
 
 model BookingNote {
@@ -142,3 +143,98 @@ model WebhookEvent {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
+
+model NotificationEvent {
+  id            Int      @id @default(autoincrement())
+  eventType     String
+  aggregateType String
+  aggregateId   Int
+  dedupeKey     String   @unique
+  source        String
+  payload       Json
+  actorLineAdminId Int?
+  bookingId     Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  booking        Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  actorLineAdmin LineAdmin? @relation(fields: [actorLineAdminId], references: [id], onDelete: SetNull)
+  deliveries     NotificationDelivery[]
+
+  @@index([eventType])
+  @@index([aggregateType, aggregateId])
+  @@index([bookingId])
+}
+
+model NotificationDelivery {
+  id             Int       @id @default(autoincrement())
+  eventId        Int
+  channel        String
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime  @default(now())
+  sentAt         DateTime?
+  lastError      String?
+  providerMessageId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  event          NotificationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, channel])
+  @@index([status, nextAttemptAt])
+}
+
+model LineAdmin {
+  id          Int       @id @default(autoincrement())
+  lineUserId  String    @unique
+  displayName String?
+  role        String
+  active      Boolean   @default(true)
+  boundAt     DateTime  @default(now())
+  lastSeenAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  notificationEvents NotificationEvent[]
+  auditLogs LineAuditLog[]
+}
+
+model LineBindingCode {
+  id          Int       @id @default(autoincrement())
+  codeHash    String    @unique
+  role        String
+  active      Boolean   @default(true)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  usedByLineUserId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([role, active, expiresAt])
+}
+
+model LineWebhookRedelivery {
+  id             Int      @id @default(autoincrement())
+  webhookEventId String   @unique
+  sourceType     String?
+  sourceUserId   String?
+  eventType      String?
+  createdAt      DateTime @default(now())
+}
+
+model LineAuditLog {
+  id          Int      @id @default(autoincrement())
+  lineAdminId Int
+  action      String
+  entityType  String
+  entityId    Int?
+  detail      Json?
+  createdAt   DateTime @default(now())
+
+  lineAdmin   LineAdmin @relation(fields: [lineAdminId], references: [id], onDelete: Cascade)
+
+  @@index([lineAdminId, createdAt])
+  @@index([entityType, entityId])
+}
+
