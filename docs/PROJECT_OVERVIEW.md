@@ -1,6 +1,6 @@
 # 86.88 B&B Project Overview
 
-Last updated: 2026-06-13
+Last updated: 2026-06-19
 
 ## Purpose
 
@@ -9,7 +9,7 @@ Last updated: 2026-06-13
 The current product goals are:
 
 - Public website for rooms, photos, location, booking information, and announcements.
-- Admin backend for the owner to manage bookings, room availability, news, images, room content, and password.
+- Admin backend for the owner to manage bookings, room availability, room pricing, festival pricing periods, news, images, room content, and password.
 - API service that centralizes booking/calendar/CMS data in PostgreSQL.
 - NAS deployment behind Nginx Proxy Manager and Cloudflare Tunnel.
 
@@ -46,7 +46,7 @@ docs/
 | Auth | JWT in HttpOnly cookie, CSRF token header for state-changing admin requests |
 | Database | PostgreSQL 16, Prisma 5 |
 | Cache / rate limit store | Redis 7 |
-| Media | Local uploaded files served from API `/uploads` |
+| Media | API media records for bundled `/images/...` and uploaded `/uploads/...` files |
 | Deployment | Docker Compose, Nginx Proxy Manager, Cloudflare Tunnel |
 
 ## Main Apps
@@ -57,9 +57,10 @@ Public-facing website for guests. It is mostly static/content-driven today and u
 
 Current completed areas include:
 
-- Home, rooms list, room detail, about, booking info, and location pages.
+- Home, rooms list, room detail, about, booking, booking info, and location pages.
 - Responsive header, footer, mobile navigation, language context, and image-heavy visual design.
-- Local room/content data.
+- API-backed rooms, news, and media when available, with bundled content/images as emergency fallback.
+- Test-phase reservation flow with API availability checks, room disabling by selected date range, confirmation modals, LINE message confirmation, and explicit invalid-booking warning.
 
 ### `apps/admin`
 
@@ -74,6 +75,7 @@ Current pages:
 - `/news` announcements.
 - `/media` image management.
 - `/rooms` room content/pricing/availability.
+- `/pricing` room price and festival pricing period management.
 - `/settings` system status and password change.
 
 ### `apps/api`
@@ -86,6 +88,7 @@ Main route groups:
 - Rooms
 - Bookings
 - Blocked dates
+- Holiday/festival pricing periods
 - Media
 - Pages
 - News
@@ -102,6 +105,7 @@ Owns the Prisma schema and generated client usage. Database models include:
 - `Booking`
 - `BookingNote`
 - `BlockedDate`
+- `HolidayPeriod`
 - `Media`
 - `Page`
 - `News`
@@ -114,10 +118,11 @@ The most recent successful verification was:
 ```bash
 npm run build --workspace @8688bnb/api
 npm exec -- tsc --project apps/admin/tsconfig.json --noEmit
-docker compose -f infra/docker-compose.yml build api admin
+npm exec -- tsc --project apps/website/tsconfig.json --noEmit
+docker compose -f infra/docker-compose.yml build api admin website
 ```
 
-The Docker build completed for both API and admin images. Host-local `next build` has previously exited silently on the NAS environment, while the Docker build completed successfully.
+The Docker build completed for API, admin, and website images. Host-local `next build` has previously exited silently on the NAS environment, while the Docker build completed successfully.
 
 ## Maintenance Rules
 

@@ -3,6 +3,8 @@
 > Source: `https://8688bnb.ylminsu.com.tw/`
 > Owner: 黃筵丰 (黃先生) · ☎ 0920-900-793 · LINE: @gps2290j
 
+> Current implementation note (2026-06-19): this file is a legacy-site discovery map, not the source of truth for the current app. Current runtime/API/deploy details live in `PROJECT_OVERVIEW.md`, `ARCHITECTURE.md`, `API_STATUS.md`, `ROADMAP.md`, and `DEPLOY.md`.
+
 ---
 
 ## 1. Sitemap — All Discovered Pages
@@ -289,9 +291,10 @@ erDiagram
         date check_out
         string guest_name
         string guest_phone
-        string guest_email
+        string guest_line_id
         int guest_count
         string status
+        decimal total_price
         text notes
         datetime created_at
     }
@@ -313,6 +316,21 @@ erDiagram
         boolean visible
     }
 
+    HOLIDAY_PERIODS {
+        int id PK
+        string name
+        date start_date
+        date end_date
+    }
+
+    MEDIA {
+        int id PK
+        string target
+        string url
+        string alt
+        int sort_order
+    }
+
     ROOMS ||--o{ BOOKINGS : "has"
 ```
 
@@ -329,7 +347,7 @@ erDiagram
 | 3 | 建立 admin account、RAID1、Shared Folder | 基礎配置 |
 | 4 | 固定 NAS IP（例如 `192.168.1.100`） | 去 router 設 DHCP reservation |
 
-### Phase 2：Docker 環境
+### Phase 2：Docker 環境（歷史分期命名）
 
 | Step | 動作 | 備註 |
 |------|------|------|
@@ -397,7 +415,7 @@ erDiagram
 
 ### 訂房互動頁面（Phase 1 就做）
 
-雖然不串金流/API，但 **一定要有好的 UI/UX 互動體驗**：
+目前網站訂房頁為測試階段：會串 API 查詢房況、估價並建立測試訂單，但頁面明確標示不視為有效訂房；正式確認仍需透過民宿主人電話或 LINE。
 
 | 功能 | 說明 |
 |------|------|
@@ -406,10 +424,10 @@ erDiagram
 | 👥 人數選擇 | 大人 / 小孩人數 |
 | 💰 預估價格 | 根據選擇即時顯示（平日/假日/連假） |
 | 📋 摘要確認 | 選完後顯示預訂摘要 |
-| 💬 送出至 LINE | 帶入預填訊息，一鍵加 LINE 傳送 |
+| 💬 送出至 LINE | 顯示即將複製的訊息，確認後複製並開啟 LINE |
 
 > [!TIP]
-> 金流或實際串 API 可以未來再看。第一版先把 UI/UX 做好，讓旅客有**專業的互動體驗**，最後導到 LINE 人工確認就夠了。
+> 目前不串金流。網站送出功能保留給測試與資料流驗證，真實訂房仍以主人確認、付款方式與實際房價為準。
 
 ---
 

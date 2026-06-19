@@ -48,6 +48,8 @@ NAS 192.168.1.128 — Docker
 **後台與 API：**
 `admin` 後台和 `api` 服務已經定義在 `infra/docker-compose.yml`，流量一樣由 Cloudflare Tunnel 進入 NPM，再由 NPM 根據網域（`admin.8688bnb.com`、`api.8688bnb.com`）轉發給對應容器。
 
+公開網站的訂房測試流程會呼叫 API 查詢房況與建立測試訂單，因此正式環境的 `WEBSITE_PUBLIC_API_URL` 必須是瀏覽器可連線的公開 API URL。
+
 ---
 
 ## <a id="prerequisites"></a>2. 前置需求 / Prerequisites
@@ -139,6 +141,14 @@ docker compose ps
 docker compose logs -f
 ```
 
+### Step 4.1: 套用資料庫 Schema 與 Seed
+
+第一次部署或 Prisma schema 更新後，請確認資料庫已套用最新 schema。`seed` profile 會掛載 `packages/db`，執行 Prisma `db push`，再寫入預設房型、媒體與節慶價格資料。`HolidayPeriod` 是節慶價格功能需要的資料表；如果尚未建立，房型價格仍可編輯，但節慶日期管理會顯示 setup warning。
+
+```bash
+docker compose --profile seed run --rm seed
+```
+
 ### Step 5: 確認所有服務正常
 
 ```bash
@@ -207,6 +217,8 @@ docker compose ps
 | Subdomain | Domain | Type | URL |
 |---|---|---|---|
 | (空白) | `8688bnb.com` | HTTP | `8688bnb-npm:80` |
+| `admin` | `8688bnb.com` | HTTP | `8688bnb-npm:80` |
+| `api` | `8688bnb.com` | HTTP | `8688bnb-npm:80` |
 
 > **注意**：URL 裡填容器名稱 `8688bnb-npm`，因為 cloudflared 容器和 NPM 在同一個 Docker 網路裡。
 
@@ -235,12 +247,19 @@ git pull
 # 切換到 infra/ 目錄
 cd infra/
 
-# 重新建構並重啟 website 容器（不影響 NPM/Tunnel/DB 等其他服務）
-docker compose build website
-docker compose up -d website
+# 重新建構並重啟有變更的容器（不影響 NPM/Tunnel/DB 等其他服務）
+docker compose build website admin api
+docker compose up -d website admin api
 
 # 確認更新成功
 docker compose logs -f website
+```
+
+如果更新包含 Prisma schema 變更，重啟 API 前先套用 schema：
+
+```bash
+docker compose --profile seed run --rm seed
+docker compose up -d api admin website
 ```
 
 > **提示**：由於使用了 `turbo prune`，Docker 建構速度將會非常快，只會重新安裝和編譯實際有更動的 Packages。
@@ -283,6 +302,11 @@ docker system prune -f                  # 清理無用的映像檔和容器
 docker builder prune -f                 # 清理建構快取
 ```
 
+```bash
+# ── 資料庫 / Database ──
+docker compose --profile seed run --rm seed
+```
+
 ---
 
 ## <a id="troubleshooting"></a>9. 疑難排解 / Troubleshooting
@@ -299,6 +323,14 @@ docker compose logs website
 
 # 3. 測試 NPM 是否正常
 curl http://localhost:8080
+```
+
+### 節慶日期顯示 setup warning / Holiday period setup warning
+
+後台「房價設定」若顯示節慶日期資料表尚未建立，代表目前資料庫還沒有 `HolidayPeriod` table。請在 `infra/` 目錄執行：
+
+```bash
+docker compose --profile seed run --rm seed
 ```
 
 ### Tunnel 連不上 / Tunnel not connecting
@@ -338,16 +370,7 @@ deploy:
 
 ## <a id="future"></a>10. 後續擴充 / Future Expansion
 
-`admin` 後台和 `api` 服務目前已可建構，部署後需要確認 NPM 與 Cloudflare Tunnel 已新增 `admin.8688bnb.com` 和 `api.8688bnb.com` 的路由。
-
-### 後續重點功能架構
-
-1. **完整訂房系統 (API & UI/UX)**：優化網站前端預約體驗，搭配 API 處理庫存扣留與訂單建立。
-2. **圖片顯示與儲存管理**：優化網站各頁面（如首頁 Gallery、房型照片）的圖片顯示，並為每頁建立更佳的圖檔儲存與管理機制。
-3. **Admin 後台管理**：
-   - **內容管理 (CMS)**：老闆可自行管理網站內容，例如首頁的**公告欄**。
-   - **訂房行事曆 (Calendar UI)**：視覺化呈現每間房的訂房狀況，方便快速查閱與排房。
-4. **OTA 平台串接 (Webhooks)**：建立 Webhook 機制，接收 Agoda、Booking.com 等外部平台的通知，自動同步房態與預訂狀態。
+`admin` 後台和 `api` 服務已可建構並支援訂單、房價、節慶價格、圖片、公告、房型、封鎖日期與系統設定。後續重點是增加自動化測試、改善 CMS 編輯體驗、強化備份/還原流程，以及在需要 OTA 串接時驗證 webhook payload。
 
 ---
 
