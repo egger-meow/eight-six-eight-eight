@@ -178,7 +178,7 @@ Room management:
 ```text
 房型
 房況 <房型slug或ID> <開始YYYY-MM-DD> <結束YYYY-MM-DD>
-房價 <房型slug或ID> 平日/週末/假日 <金額>
+房價 <房型slug或ID> 平日/假日/過年 <金額>
 房型開關 <房型slug或ID> 開/關
 ```
 

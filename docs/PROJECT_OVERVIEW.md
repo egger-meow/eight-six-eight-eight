@@ -9,7 +9,7 @@ Last updated: 2026-06-19
 The current product goals are:
 
 - Public website for rooms, photos, location, booking information, and announcements.
-- Admin backend for the owner to manage bookings, room availability, room pricing, festival pricing periods, news, images, room content, and password.
+- Admin backend for the owner to manage bookings, room availability, room pricing, special pricing periods, news, images, room content, and password.
 - API service that centralizes booking/calendar/CMS data in PostgreSQL.
 - NAS deployment behind Nginx Proxy Manager and Cloudflare Tunnel.
 
@@ -75,7 +75,7 @@ Current pages:
 - `/news` announcements.
 - `/media` image management.
 - `/rooms` room content/pricing/availability.
-- `/pricing` room price and festival pricing period management.
+- `/pricing` room price and special pricing period management.
 - `/settings` system status and password change.
 
 ### `apps/api`
@@ -88,7 +88,7 @@ Main route groups:
 - Rooms
 - Bookings
 - Blocked dates
-- Holiday/festival pricing periods
+- Holiday/special pricing periods
 - Media
 - Pages
 - News

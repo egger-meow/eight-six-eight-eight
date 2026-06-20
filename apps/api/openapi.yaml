@@ -664,7 +664,7 @@ components:
 
     HolidayPeriod:
       type: object
-      description: Date range that uses room price_holiday for stay-night pricing.
+      description: Special pricing date range. pricing_type weekend uses price_weekend except the final date of a multi-day range uses price_weekday; pricing_type holiday is Chinese New Year pricing and uses price_holiday.
       properties:
         id:
           type: integer
@@ -680,13 +680,18 @@ components:
           type: string
           format: date
           example: '2026-02-22'
+        pricing_type:
+          type: string
+          enum: [weekend, holiday]
+          description: weekend = 假日價 rules for public holidays/long weekends; holiday = 過年價 / Chinese New Year only.
+          example: holiday
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
-      required: [id, name, start_date, end_date, created_at, updated_at]
+      required: [id, name, start_date, end_date, pricing_type, created_at, updated_at]
 
     HolidayPeriodCreateRequest:
       type: object
@@ -704,6 +709,10 @@ components:
           type: string
           format: date
           example: '2026-02-22'
+        pricing_type:
+          type: string
+          enum: [weekend, holiday]
+          default: weekend
       required: [name, start_date, end_date]
 
     HolidayPeriodUpdateRequest:
@@ -719,6 +728,9 @@ components:
         end_date:
           type: string
           format: date
+        pricing_type:
+          type: string
+          enum: [weekend, holiday]
       minProperties: 1
 
     # ── Media (Page-level image management) ────────────────────────────────────

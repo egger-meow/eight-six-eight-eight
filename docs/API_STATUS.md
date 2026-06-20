@@ -17,7 +17,7 @@ Source of truth:
 | Rooms | Complete | Public list/detail and admin create/update/delete. |
 | Bookings | Complete | CRUD, notes, and calendar endpoint. |
 | Blocked dates | Complete | Owner busy/unavailable periods; `room_id: null` means all rooms. |
-| Holiday periods | Complete | Editable festival pricing periods used by shared pricing logic; pricing-only, not availability blocking. |
+| Holiday periods | Complete | Editable special pricing periods used by shared pricing logic; pricing-only, not availability blocking. `holiday` means Chinese New Year pricing only. |
 | Media | Complete | Upload, list by target, update metadata/order, delete, target list. |
 | Pages | Implemented | CMS page CRUD exists in API; admin UI coverage still needs richer editor flow. |
 | News | Complete | Announcement list/create/update/delete with `visible`, `pinned`, `published_at`. |
@@ -89,13 +89,14 @@ The response includes availability and, when possible, an estimated total using 
 
 Pricing precedence per stay night:
 
-1. Matching holiday/festival period -> `price_holiday`
-2. Friday or Saturday -> `price_weekend`
-3. Other nights -> `price_weekday`
+1. Matching `pricing_type: holiday` period -> `price_holiday`
+2. Matching `pricing_type: weekend` period -> `price_weekend`, except the final date of a multi-day range -> `price_weekday`
+3. Normal Saturday night -> `price_weekend`
+4. All other normal nights, including Sunday -> `price_weekday`
 
 ### Holiday Periods
 
-Holiday/festival pricing endpoints:
+Special pricing period endpoints:
 
 ```text
 GET /api/v1/holiday-periods
@@ -109,6 +110,7 @@ JSON uses:
 - `name`
 - `start_date`
 - `end_date`
+- `pricing_type`: `weekend` for public holidays/long weekends using 假日價 rules, `holiday` for Chinese New Year / 過年價 only
 
 If the deployed database has not received the `HolidayPeriod` schema yet, `GET` returns an empty list with `meta.setup_required: true`; mutating endpoints return `409 SETUP_REQUIRED`.
 

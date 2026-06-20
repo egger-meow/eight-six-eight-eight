@@ -6,6 +6,33 @@ const db_1 = require("@8688bnb/db");
 function dateOnly(date) {
     return date.toISOString().split('T')[0];
 }
+function inferPricingTypeFromName(name) {
+    return /春節|除夕|農曆/.test(name) ? 'holiday' : 'weekend';
+}
+function periodType(period) {
+    return period.pricingType === 'holiday' ? 'holiday' : 'weekend';
+}
+async function findLegacyPricingPeriods(firstStayDate, lastStayDate) {
+    const rows = await db_1.db.$queryRawUnsafe('SELECT name, "startDate", "endDate" FROM "HolidayPeriod" WHERE "startDate" <= $1 AND "endDate" >= $2 ORDER BY "startDate" ASC, id ASC', lastStayDate, firstStayDate);
+    return rows
+        .map((row) => ({
+        startDate: row.startDate,
+        endDate: row.endDate,
+        pricingType: inferPricingTypeFromName(row.name),
+    }))
+        .sort((a, b) => periodType(a).localeCompare(periodType(b)) || a.startDate.getTime() - b.startDate.getTime());
+}
+function isFinalDateInMultiDayWeekendPeriod(date, period) {
+    return periodType(period) === 'weekend' && dateOnly(period.startDate) !== dateOnly(period.endDate) && dateOnly(date) === dateOnly(period.endDate);
+}
+function rateForSpecialDate(room, date, periods) {
+    const matchingPeriod = periods.find((period) => date >= period.startDate && date <= period.endDate);
+    if (!matchingPeriod)
+        return null;
+    if (periodType(matchingPeriod) === 'holiday')
+        return room.priceHoliday;
+    return isFinalDateInMultiDayWeekendPeriod(date, matchingPeriod) ? room.priceWeekday : room.priceWeekend;
+}
 function eachStayDate(checkIn, checkOut) {
     const dates = [];
     const current = new Date(checkIn);
@@ -26,26 +53,22 @@ async function calculateStayPrice(room, checkIn, checkOut) {
                 startDate: { lte: stayDates[stayDates.length - 1] },
                 endDate: { gte: stayDates[0] },
             },
+            orderBy: [{ pricingType: 'asc' }, { startDate: 'asc' }, { id: 'asc' }],
         });
     }
     catch (error) {
-        if (error?.code !== 'P2021')
+        if (error?.code === 'P2022') {
+            periods = await findLegacyPricingPeriods(stayDates[0], stayDates[stayDates.length - 1]);
+        }
+        else if (error?.code !== 'P2021') {
             throw error;
-    }
-    const holidayDates = new Set();
-    for (const period of periods) {
-        const current = new Date(period.startDate);
-        const end = new Date(period.endDate);
-        while (current <= end) {
-            holidayDates.add(dateOnly(current));
-            current.setDate(current.getDate() + 1);
         }
     }
     return stayDates.reduce((total, date) => {
-        if (holidayDates.has(dateOnly(date)))
-            return total + room.priceHoliday;
-        const day = date.getDay();
-        return total + (day === 5 || day === 6 ? room.priceWeekend : room.priceWeekday);
+        const specialRate = rateForSpecialDate(room, date, periods);
+        if (specialRate !== null)
+            return total + specialRate;
+        return total + (date.getDay() === 6 ? room.priceWeekend : room.priceWeekday);
     }, 0);
 }
 //# sourceMappingURL=pricing.js.map

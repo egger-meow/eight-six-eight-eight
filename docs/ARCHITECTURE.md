@@ -102,7 +102,7 @@ Core relationships:
 - `Booking` belongs to one `Room` and has many `BookingNote`.
 - `BlockedDate` may target one room or all rooms when `roomId` is null.
 - `Media` is grouped by string `target`, such as page or section.
-- `HolidayPeriod` stores editable festival pricing date ranges. It affects pricing only and does not block availability.
+- `HolidayPeriod` stores editable special pricing date ranges. It affects pricing only and does not block availability.
 - `Page` stores CMS HTML content by unique `slug`.
 - `News` stores announcements with visibility and pinned state.
 - `WebhookEvent` stores incoming OTA/channel-manager event payloads.
@@ -116,14 +116,14 @@ Naming conversion:
 Pricing rules:
 
 - Reservation creation and room availability estimates share `apps/api/src/lib/pricing.ts`.
-- Each stay night is priced independently: if the night is inside a `HolidayPeriod`, use `price_holiday`; otherwise Friday/Saturday use `price_weekend`; all other nights use `price_weekday`.
+- Each stay night is priced independently: `pricingType: holiday` is Chinese New Year only and uses `price_holiday`; `pricingType: weekend` uses `price_weekend` except the final date of a multi-day range uses `price_weekday`; normal weeks use `price_weekend` only on Saturday night and `price_weekday` on all other nights.
 - If the `HolidayPeriod` table has not been deployed yet, pricing degrades to weekday/weekend logic and the admin pricing page shows a setup warning.
 
 Availability rules:
 
 - Availability checks consider both bookings and blocked dates.
 - Any overlapping booking in the selected date range makes the room unavailable, including bookings that are not confirmed.
-- Blocked dates remain operational availability controls; holiday/festival periods are pricing-only.
+- Blocked dates remain operational availability controls; special pricing periods are pricing-only.
 
 Media bootstrap:
 
@@ -140,7 +140,7 @@ Media bootstrap:
 - `src/context/AuthContext.tsx` for login/session/CSRF state.
 - `src/components/BookingCalendar.tsx` for custom room/date grid view.
 - `src/components/BookingList.tsx` for list view sorted by closest upcoming bookings.
-- `/pricing` for room weekday/weekend/festival prices and editable festival pricing periods.
+- `/pricing` for room weekday/weekend/CNY prices and editable special pricing periods.
 
 The admin app cannot inspect the API HttpOnly session cookie from middleware when API and admin are on different hostnames. Auth gating is therefore handled in the app context and API responses.
 

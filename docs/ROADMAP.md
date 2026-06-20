@@ -9,7 +9,7 @@ Last updated: 2026-06-19
 - Website reservation test flow includes date-based room availability checks, unavailable room disabling, API-backed price estimates, confirmation modal, LINE confirmation modal, and an explicit test-only warning.
 - Docker Compose stack includes website, admin, API, PostgreSQL, Redis, Nginx Proxy Manager, Cloudflare Tunnel, and seed profile.
 - Express API implemented for auth, rooms, bookings, blocked dates, media, pages, news, dashboard, webhooks, and system info.
-- Prisma schema established for users, rooms, bookings, booking notes, blocked dates, holiday/festival pricing periods, media, CMS pages, news, and webhook events.
+- Prisma schema established for users, rooms, bookings, booking notes, blocked dates, special pricing periods, media, CMS pages, news, and webhook events.
 - Admin dashboard built in Traditional Chinese with:
   - Login and session handling.
   - Dashboard stats.
@@ -19,7 +19,7 @@ Last updated: 2026-06-19
   - News/announcement management.
   - Media target upload/list/delete.
   - Room pricing/content/availability editing.
-  - Dedicated room price and festival pricing period management.
+  - Dedicated room price and special pricing period management.
   - System status and password change.
 - API, admin, and website Docker images build successfully.
 
@@ -40,23 +40,23 @@ Last updated: 2026-06-19
    - Confirm the five real room records exist.
    - Confirm the admin user password is known and immediately changed.
    - Confirm uploaded media persists in the intended Docker volume or bind mount.
-   - Apply the current Prisma schema so the `HolidayPeriod` table exists, then seed/verify editable festival pricing periods.
+   - Apply the current Prisma schema so the `HolidayPeriod` table exists, then seed/verify editable special pricing periods.
 
 4. Add workflow tests.
    - API auth and CSRF.
    - Booking create/update/delete/calendar.
-   - Room availability estimates and booking creation pricing parity across weekday, weekend, and festival periods.
+   - Room availability estimates and booking creation pricing parity across weekday, Saturday, long-weekend, and Chinese New Year periods.
    - Blocked date all-room behavior.
    - Media upload/delete.
    - Room update.
-   - Holiday/festival period CRUD.
+   - Special pricing period CRUD.
 
 ## Product Gaps
 
 - Pages CMS needs a better lightweight editor flow in admin.
 - Calendar UX can be improved with drag selection, clearer occupancy density, and print/export if owner needs it.
 - Booking conflict handling should be covered by automated tests for overlapping bookings, pending/unconfirmed bookings, and blocked dates.
-- Festival pricing has a copy-to-next-year workflow, but lunar-calendar holidays and government-adjusted long weekends still need owner review each year.
+- Special pricing has a copy-to-next-year workflow, but Chinese New Year dates and government-adjusted long weekends still need owner review each year.
 - OTA/channel-manager webhook mapping is not production-proven.
 - No explicit audit trail for admin changes except booking notes and webhook events.
 

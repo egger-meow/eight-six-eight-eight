@@ -63,7 +63,7 @@ function localEstimate(room: WebsiteRoom | undefined, checkIn: string, checkOut:
   const end = new Date(`${checkOut}T00:00:00`);
   while (current < end) {
     const day = current.getDay();
-    total += day === 5 || day === 6 ? room.price_weekend : room.price_weekday;
+    total += day === 6 ? room.price_weekend : room.price_weekday;
     current.setDate(current.getDate() + 1);
   }
   return total;
@@ -276,6 +276,7 @@ function BookingForm() {
       setSuccess(booking);
       setStatus(t(bookingPage.messages.success));
       setModalMode(null);
+      window.alert(t(bookingPage.messages.success));
       window.location.href = '/';
     } catch (error) {
       const message = error instanceof Error ? error.message : '訂房送出失敗';

@@ -143,7 +143,7 @@ docker compose logs -f
 
 ### Step 4.1: 套用資料庫 Schema 與 Seed
 
-第一次部署或 Prisma schema 更新後，請確認資料庫已套用最新 schema。`seed` profile 會掛載 `packages/db`，執行 Prisma `db push`，再寫入預設房型、媒體與節慶價格資料。`HolidayPeriod` 是節慶價格功能需要的資料表；如果尚未建立，房型價格仍可編輯，但節慶日期管理會顯示 setup warning。
+第一次部署或 Prisma schema 更新後，請確認資料庫已套用最新 schema。`seed` profile 會掛載 `packages/db`，執行 Prisma `db push`，再寫入預設房型、媒體與特殊價格資料。`HolidayPeriod` 是特殊日期價格功能需要的資料表；如果尚未建立，房型價格仍可編輯，但特殊日期管理會顯示 setup warning。
 
 ```bash
 docker compose --profile seed run --rm seed
@@ -325,9 +325,9 @@ docker compose logs website
 curl http://localhost:8080
 ```
 
-### 節慶日期顯示 setup warning / Holiday period setup warning
+### 特殊日期顯示 setup warning / Special pricing period setup warning
 
-後台「房價設定」若顯示節慶日期資料表尚未建立，代表目前資料庫還沒有 `HolidayPeriod` table。請在 `infra/` 目錄執行：
+後台「房價設定」若顯示特殊日期資料表尚未建立，代表目前資料庫還沒有 `HolidayPeriod` table。請在 `infra/` 目錄執行：
 
 ```bash
 docker compose --profile seed run --rm seed
@@ -370,7 +370,7 @@ deploy:
 
 ## <a id="future"></a>10. 後續擴充 / Future Expansion
 
-`admin` 後台和 `api` 服務已可建構並支援訂單、房價、節慶價格、圖片、公告、房型、封鎖日期與系統設定。後續重點是增加自動化測試、改善 CMS 編輯體驗、強化備份/還原流程，以及在需要 OTA 串接時驗證 webhook payload。
+`admin` 後台和 `api` 服務已可建構並支援訂單、房價、特殊價格、圖片、公告、房型、封鎖日期與系統設定。後續重點是增加自動化測試、改善 CMS 編輯體驗、強化備份/還原流程，以及在需要 OTA 串接時驗證 webhook payload。
 
 ---
 

@@ -83,14 +83,16 @@ model BlockedDate {
 }
 
 model HolidayPeriod {
-  id        Int      @id @default(autoincrement())
-  name      String
-  startDate DateTime @db.Date
-  endDate   DateTime @db.Date
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  name        String
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  pricingType String   @default("weekend")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([startDate, endDate])
+  @@index([pricingType])
 }
 
 model Media {

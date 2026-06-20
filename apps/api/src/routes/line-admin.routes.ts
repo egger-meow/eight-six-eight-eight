@@ -416,7 +416,7 @@ async function handleTextCommand(event: LineWebhookEvent, actorLineAdminId: numb
     return;
   }
 
-  match = text.match(/^房價\s+(\S+)\s+(weekday|weekend|holiday|平日|週末|假日)\s+(\d+)$/i);
+  match = text.match(/^房價\s+(\S+)\s+(weekday|weekend|holiday|平日|週末|假日|過年)\s+(\d+)$/i);
   if (match) {
     await updateRoomPriceFromLine(event.replyToken, match[1], match[2], Number(match[3]), actorLineAdminId);
     return;
@@ -452,7 +452,7 @@ function commandHelpText() {
     '新增訂房 <房型slug或ID> <入住> <退房> <人數> <姓名> <電話> [金額] [備註]',
     '修改訂單 <ID> 房型/入住/退房/人數/金額/電話/狀態 <值>',
     '封鎖列表；封鎖 <房型或全部> <開始> <結束> [原因]；解除封鎖 <ID>',
-    '房型；房況 <房型> <開始> <結束>；房價 <房型> 平日/週末/假日 <金額>；房型開關 <房型> 開/關',
+    '房型；房況 <房型> <開始> <結束>；房價 <房型> 平日/假日/過年 <金額>；房型開關 <房型> 開/關',
     '公告；公告更新 <標題>|<內容>',
   ].join('\n');
 }
@@ -742,7 +742,7 @@ async function replyConfirmRemoveBlock(replyToken: string | undefined, blockId: 
 
 async function buildRoomsText() {
   const rooms = await db.room.findMany({ orderBy: { sortOrder: 'asc' } });
-  return rooms.map((room) => `${room.slug}｜${room.nameZh}｜${room.available ? '開放' : '停用'}｜平日 ${money(room.priceWeekday)}｜週末 ${money(room.priceWeekend)}｜假日 ${money(room.priceHoliday)}`).join('\n');
+  return rooms.map((room) => `${room.slug}｜${room.nameZh}｜${room.available ? '開放' : '停用'}｜平日 ${money(room.priceWeekday)}｜假日 ${money(room.priceWeekend)}｜過年 ${money(room.priceHoliday)}`).join('\n');
 }
 
 async function replyRoomAvailability(replyToken: string | undefined, roomRef: string, from: string, to: string) {
@@ -757,7 +757,7 @@ async function replyRoomAvailability(replyToken: string | undefined, roomRef: st
 async function updateRoomPriceFromLine(replyToken: string | undefined, roomRef: string, priceType: string, price: number, actorLineAdminId: number) {
   const room = await findRoomByRef(roomRef);
   if (!room) { await replyText(replyToken, '房型不存在。'); return; }
-  const key = /^(weekday|平日)$/i.test(priceType) ? 'priceWeekday' : /^(weekend|週末)$/i.test(priceType) ? 'priceWeekend' : 'priceHoliday';
+  const key = /^(weekday|平日)$/i.test(priceType) ? 'priceWeekday' : /^(weekend|週末|假日)$/i.test(priceType) ? 'priceWeekend' : 'priceHoliday';
   await db.$transaction(async (tx) => {
     await tx.room.update({ where: { id: room.id }, data: { [key]: price } });
     await recordLineAudit({ tx, lineAdminId: actorLineAdminId, action: 'room.price_update', entityType: 'room', entityId: room.id, detail: { price_type: priceType, price } });

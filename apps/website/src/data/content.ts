@@ -334,7 +334,7 @@ export const bookingPage = {
     requiredContact: { zh: '請填寫姓名與電話，方便民宿主人確認訂房。', en: 'Please enter your name and phone number so the host can confirm the reservation.' },
     apiUnavailable: { zh: '線上空房查詢與送出暫時無法使用，請先使用 LINE 聯繫民宿主人。', en: 'Online availability and submission are temporarily unavailable. Please contact the host via LINE.' },
     unavailable: { zh: '此時段目前無法預約，請更換日期或透過 LINE 詢問其他安排。', en: 'This date range is unavailable. Please choose other dates or ask via LINE.' },
-    success: { zh: '已送出預約，狀態為待確認。請透過 LINE 補充付款或抵達時間等細節。', en: 'Reservation submitted and pending confirmation. Please use LINE for payment or arrival details.' },
+    success: { zh: '成功送出預約', en: 'Reservation submitted successfully.' },
     failure: { zh: '訂房送出失敗，請稍後再試或使用 LINE 聯繫。', en: 'Reservation failed. Please try again later or contact us via LINE.' },
     lineCopied: { zh: '訂房資訊已複製，請貼到 LINE 訊息中傳送給民宿主人。', en: 'Reservation details copied. Please paste them into LINE and send them to the host.' },
     lineCopyFailed: { zh: '無法自動複製訂房資訊，請手動複製摘要後使用 LINE 聯繫。', en: 'Could not copy reservation details automatically. Please copy the summary and contact us via LINE.' },

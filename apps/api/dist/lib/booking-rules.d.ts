@@ -8,11 +8,13 @@ export type BookingValidationError = {
 };
 export declare function findRoomByRef(roomRef: string, client?: DbClient): Promise<{
     id: number;
+    createdAt: Date;
+    updatedAt: Date;
+    type: string;
     slug: string;
     nameZh: string;
     nameEn: string | null;
     capacity: number;
-    type: string;
     description: string | null;
     amenities: string[];
     priceWeekday: number;
@@ -20,8 +22,6 @@ export declare function findRoomByRef(roomRef: string, client?: DbClient): Promi
     priceHoliday: number;
     available: boolean;
     sortOrder: number;
-    createdAt: Date;
-    updatedAt: Date;
 } | null>;
 export declare function validateBookingMutation(args: {
     client?: DbClient;

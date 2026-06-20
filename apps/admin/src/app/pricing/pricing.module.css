@@ -70,7 +70,7 @@
 }
 
 .periodGrid {
-  grid-template-columns: 1.2fr 1fr 1fr auto;
+  grid-template-columns: 1.2fr 1fr 1fr 0.9fr auto;
   align-items: end;
 }
 
@@ -93,7 +93,7 @@
 .periodTable {
   min-width: 760px;
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr auto;
+  grid-template-columns: 1.4fr 1fr 1fr 0.9fr auto;
   gap: 0.75rem;
   align-items: center;
 }

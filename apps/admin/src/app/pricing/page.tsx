@@ -15,18 +15,21 @@ type Room = {
   price_holiday: number;
 };
 
+type PricingType = 'weekend' | 'holiday';
+
 type FestivalPeriod = {
   id: number;
   name: string;
   start_date: string;
   end_date: string;
+  pricing_type: PricingType;
 };
 
 type PriceDraft = Pick<Room, 'price_weekday' | 'price_weekend' | 'price_holiday'>;
 
 type FestivalDraft = Omit<FestivalPeriod, 'id'>;
 
-const emptyPeriod: FestivalDraft = { name: '', start_date: '', end_date: '' };
+const emptyPeriod: FestivalDraft = { name: '', start_date: '', end_date: '', pricing_type: 'weekend' };
 
 function addYear(dateString: string) {
   const date = new Date(dateString + 'T00:00:00');
@@ -50,6 +53,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [setupRequired, setSetupRequired] = useState(false);
+  const [pricingTypeSetupRequired, setPricingTypeSetupRequired] = useState(false);
 
   async function loadRooms() {
     const roomsRes = await apiFetch('/rooms', { skipCache: true });
@@ -68,15 +72,18 @@ export default function PricingPage() {
       const periodData = periodsRes?.data || [];
       setPeriods(periodData);
       setSetupRequired(Boolean(periodsRes?.meta?.setup_required));
+      setPricingTypeSetupRequired(Boolean(periodsRes?.meta?.pricing_type_setup_required));
       setPeriodDrafts(Object.fromEntries(periodData.map((period: FestivalPeriod) => [period.id, {
         name: period.name,
         start_date: period.start_date,
         end_date: period.end_date,
+        pricing_type: period.pricing_type || 'weekend',
       }])));
     } catch (error: any) {
       setSetupRequired(true);
+      setPricingTypeSetupRequired(false);
       setPeriods([]);
-      setStatus(error.message || '節慶日期載入失敗，房型價格仍可編輯。');
+      setStatus(error.message || '特殊日期載入失敗，房型價格仍可編輯。');
     }
   }
 
@@ -127,10 +134,10 @@ export default function PricingPage() {
         body: JSON.stringify(periodForm),
       });
       setPeriodForm(emptyPeriod);
-      setStatus(`已新增節慶日期：${res?.data?.name || periodForm.name}`);
+      setStatus(`已新增特殊日期：${res?.data?.name || periodForm.name}`);
       await loadPeriods();
     } catch (error: any) {
-      setStatus(error.message || '新增節慶日期失敗');
+      setStatus(error.message || '新增特殊日期失敗');
     }
   }
 
@@ -152,27 +159,27 @@ export default function PricingPage() {
         method: 'PUT',
         body: JSON.stringify(draft),
       });
-      setStatus(`已更新節慶日期：${res?.data?.name || draft.name}`);
+      setStatus(`已更新特殊日期：${res?.data?.name || draft.name}`);
       await loadPeriods();
     } catch (error: any) {
-      setStatus(error.message || '更新節慶日期失敗');
+      setStatus(error.message || '更新特殊日期失敗');
     }
   }
 
   async function deletePeriod(id: number) {
-    if (!confirm('確定要刪除此節慶日期嗎？')) return;
+    if (!confirm('確定要刪除此特殊日期嗎？')) return;
     try {
       await apiFetch(`/holiday-periods/${id}`, { method: 'DELETE' });
-      setStatus('節慶日期已刪除');
+      setStatus('特殊日期已刪除');
       await loadPeriods();
     } catch (error: any) {
-      setStatus(error.message || '刪除節慶日期失敗');
+      setStatus(error.message || '刪除特殊日期失敗');
     }
   }
 
   async function cloneNextYear() {
     if (periods.length === 0) {
-      setStatus('目前沒有可複製的節慶日期。');
+      setStatus('目前沒有可複製的特殊日期。');
       return;
     }
 
@@ -182,6 +189,7 @@ export default function PricingPage() {
         name: nextYearName(period.name),
         start_date: addYear(period.start_date),
         end_date: addYear(period.end_date),
+        pricing_type: period.pricing_type,
       }))
       .filter((period) => !existingKeys.has(`${period.name}|${period.start_date}|${period.end_date}`));
 
@@ -191,7 +199,7 @@ export default function PricingPage() {
         await apiFetch('/holiday-periods', { method: 'POST', body: JSON.stringify(period) });
         created += 1;
       }
-      setStatus(created > 0 ? `已複製 ${created} 筆到下一年度，請確認農曆節慶日期是否需要調整。` : '下一年度節慶日期已存在。');
+      setStatus(created > 0 ? `已複製 ${created} 筆到下一年度，請確認農曆春節與政府公告連假是否需要調整。` : '下一年度特殊日期已存在。');
       await loadPeriods();
     } catch (error: any) {
       setStatus(error.message || '複製下一年度失敗');
@@ -205,12 +213,13 @@ export default function PricingPage() {
       <div className={styles.header}>
         <div>
           <h1>房價設定</h1>
-          <p>設定各房型平日、週五週六與節慶價格。節慶日期只影響價格，不會封鎖房間。</p>
+          <p>設定各房型平日、假日與過年價格。特殊日期只影響價格，不會封鎖房間。</p>
         </div>
       </div>
 
       {status && <div className={styles.status}>{status}</div>}
-      {setupRequired && <div className={styles.warning}>節慶日期資料表尚未建立。房型價格可以正常編輯；若要新增或管理節慶日期，請先套用資料庫 schema。</div>}
+      {setupRequired && <div className={styles.warning}>特殊日期資料表尚未建立。房型價格可以正常編輯；若要新增或管理特殊日期，請先套用資料庫 schema。</div>}
+      {pricingTypeSetupRequired && <div className={styles.warning}>特殊日期資料表需要更新。現有日期可以檢視；若要新增、修改或選擇假日價/過年價，請先套用最新資料庫 schema。</div>}
 
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}><DollarSign size={20} /> 房型價格</h2>
@@ -223,8 +232,8 @@ export default function PricingPage() {
                 <div className={styles.roomMeta}>可住 {room.capacity} 人</div>
                 <div className={styles.priceGrid}>
                   <label className="form-group"><span className="form-label">平日</span><input className="input-field" type="number" min="0" value={draft?.price_weekday ?? 0} onChange={(e) => updateDraft(room.slug, 'price_weekday', e.target.value)} /></label>
-                  <label className="form-group"><span className="form-label">週五週六</span><input className="input-field" type="number" min="0" value={draft?.price_weekend ?? 0} onChange={(e) => updateDraft(room.slug, 'price_weekend', e.target.value)} /></label>
-                  <label className="form-group"><span className="form-label">節慶</span><input className="input-field" type="number" min="0" value={draft?.price_holiday ?? 0} onChange={(e) => updateDraft(room.slug, 'price_holiday', e.target.value)} /></label>
+                  <label className="form-group"><span className="form-label">假日</span><input className="input-field" type="number" min="0" value={draft?.price_weekend ?? 0} onChange={(e) => updateDraft(room.slug, 'price_weekend', e.target.value)} /></label>
+                  <label className="form-group"><span className="form-label">過年</span><input className="input-field" type="number" min="0" value={draft?.price_holiday ?? 0} onChange={(e) => updateDraft(room.slug, 'price_holiday', e.target.value)} /></label>
                 </div>
                 <div className={styles.actions}><button className="btn btn-primary" type="button" onClick={() => saveRoom(room)}>儲存房價</button></div>
               </article>
@@ -235,30 +244,32 @@ export default function PricingPage() {
 
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}><CalendarRange size={20} /> 節慶日期</h2>
-          <button className="btn btn-secondary" type="button" onClick={cloneNextYear} disabled={setupRequired || periods.length === 0}><CopyPlus size={16} /> 複製到下一年</button>
+          <h2 className={styles.sectionTitle}><CalendarRange size={20} /> 特殊日期價格</h2>
+          <button className="btn btn-secondary" type="button" onClick={cloneNextYear} disabled={setupRequired || pricingTypeSetupRequired || periods.length === 0}><CopyPlus size={16} /> 複製到下一年</button>
         </div>
 
         <form className={styles.periodForm} onSubmit={createPeriod}>
-          <h3>新增節慶日期</h3>
+          <h3>新增特殊日期</h3>
           <div className={styles.periodGrid}>
             <label className="form-group"><span className="form-label">名稱</span><input className="input-field" value={periodForm.name} onChange={(e) => setPeriodForm({ ...periodForm, name: e.target.value })} placeholder="例如：農曆春節" required /></label>
             <label className="form-group"><span className="form-label">開始日期</span><input className="input-field" type="date" value={periodForm.start_date} onChange={(e) => setPeriodForm({ ...periodForm, start_date: e.target.value })} required /></label>
             <label className="form-group"><span className="form-label">結束日期</span><input className="input-field" type="date" value={periodForm.end_date} onChange={(e) => setPeriodForm({ ...periodForm, end_date: e.target.value })} required /></label>
-            <button className="btn btn-primary" type="submit" disabled={setupRequired}>新增</button>
+            <label className="form-group"><span className="form-label">價格類型</span><select className="input-field" value={periodForm.pricing_type} onChange={(e) => setPeriodForm({ ...periodForm, pricing_type: e.target.value as PricingType })}><option value="weekend">假日價</option><option value="holiday">過年價</option></select></label>
+            <button className="btn btn-primary" type="submit" disabled={setupRequired || pricingTypeSetupRequired}>新增</button>
           </div>
-          <p className={styles.helpText}>符合這些日期的住宿晚數會使用各房型的節慶價格；其他週五、週六使用週五週六價格。複製到下一年後仍需確認農曆節慶與政府公告連假。</p>
+          <p className={styles.helpText}>假日價：單日假日使用假日價，連假最後一晚使用平日價；過年價：所有區間晚數使用過年價。一般週只在週六晚使用假日價。</p>
         </form>
 
         <div className={styles.periodTableCard}>
-          <div className={styles.tableTitle}>目前節慶日期管理</div>
+          <div className={styles.tableTitle}>目前特殊日期管理</div>
           {periods.length === 0 ? (
-            <p className={styles.emptyText}>目前沒有節慶日期。</p>
+            <p className={styles.emptyText}>目前沒有特殊日期。</p>
           ) : (
             <div className={styles.periodTable}>
               <div className={styles.periodTableHead}>名稱</div>
               <div className={styles.periodTableHead}>開始日期</div>
               <div className={styles.periodTableHead}>結束日期</div>
+              <div className={styles.periodTableHead}>價格類型</div>
               <div className={styles.periodTableHead}>操作</div>
               {periods.map((period) => {
                 const draft = periodDrafts[period.id] || period;
@@ -267,9 +278,10 @@ export default function PricingPage() {
                     <input className="input-field" value={draft.name} onChange={(e) => updatePeriodDraft(period.id, 'name', e.target.value)} />
                     <input className="input-field" type="date" value={draft.start_date} onChange={(e) => updatePeriodDraft(period.id, 'start_date', e.target.value)} />
                     <input className="input-field" type="date" value={draft.end_date} onChange={(e) => updatePeriodDraft(period.id, 'end_date', e.target.value)} />
+                    <select className="input-field" value={draft.pricing_type} onChange={(e) => updatePeriodDraft(period.id, 'pricing_type', e.target.value as PricingType)}><option value="weekend">假日價</option><option value="holiday">過年價</option></select>
                     <div className={styles.periodActions}>
-                      <button className="btn btn-primary" type="button" onClick={() => savePeriod(period.id)}>儲存</button>
-                      <button className={`btn ${styles.dangerBtn}`} type="button" onClick={() => deletePeriod(period.id)}><Trash2 size={16} /> 刪除</button>
+                      <button className="btn btn-primary" type="button" onClick={() => savePeriod(period.id)} disabled={pricingTypeSetupRequired}>儲存</button>
+                      <button className={`btn ${styles.dangerBtn}`} type="button" onClick={() => deletePeriod(period.id)} disabled={pricingTypeSetupRequired}><Trash2 size={16} /> 刪除</button>
                     </div>
                   </React.Fragment>
                 );
