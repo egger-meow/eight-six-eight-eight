@@ -6,7 +6,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "line:rich-menu:sync": "tsx src/scripts/sync-line-rich-menu.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@8688bnb/db": "*",

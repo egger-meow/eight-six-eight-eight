@@ -1,6 +1,6 @@
 # LINE Bot and Booking Notifications
 
-Last updated: 2026-06-19
+Last updated: 2026-06-20
 
 ## Scope
 
@@ -221,3 +221,81 @@ LINE Push Message delivery requires Messaging API user IDs, which start with `U`
 3. Send that code to the bot in a direct one-to-one LINE chat.
 4. Confirm the Admin `/line` page shows `可接收通知`.
 5. Retry any pending LINE notification delivery from the same page.
+
+## Rich Menu and Mobile UX
+
+Authorized administrators should normally navigate through a per-user Rich Menu instead of memorizing text commands. The bot does not set a public/default Rich Menu and does not add LINE group notification support. Each active administrator receives notifications and uses the bot in a direct one-to-one chat with the `86.88 網站管理` Official Account.
+
+The Rich Menu is a single 2500x1686 image split into three columns and two rows:
+
+```text
+今日概況 | 訂房管理 | 新增訂房
+封鎖日期 | 房型價格 | 網站公告
+```
+
+Tap areas use hidden postback actions, not message actions, so tapping the menu does not add command text to the chat. Current versioned payloads are:
+
+```text
+v=1&a=dashboard
+v=1&a=booking_menu
+v=1&a=booking_create
+v=1&a=blocked_menu
+v=1&a=room_menu
+v=1&a=announcement
+```
+
+Lifecycle:
+
+- Successful owner/developer binding links the versioned Rich Menu to that user's `U...` LINE user ID.
+- Developer revocation unlinks that user's Rich Menu. Owner access remains protected.
+- Multiple active administrators are supported; each active valid `U...` ID is linked separately.
+- Unauthorized or malformed user IDs are never linked.
+
+Sync command:
+
+```bash
+npm run line:rich-menu:sync --workspace @8688bnb/api -- --image=/absolute/path/to/rich-menu.png
+npm run line:rich-menu:sync --workspace @8688bnb/api -- --dry-run
+```
+
+The sync command validates tap areas, creates or reuses the versioned Rich Menu, uploads a PNG/JPEG image when `--image` or `LINE_RICH_MENU_IMAGE_PATH` is provided, links active authorized users, unlinks inactive users, deletes stale `86.88 Admin ...` menu versions, and reports only non-secret status counts. It never prints the LINE channel access token.
+
+Deployment and troubleshooting:
+
+1. Confirm `LINE_CHANNEL_ACCESS_TOKEN` and `LINE_CHANNEL_SECRET` are configured on the API container.
+2. Prepare a PNG/JPEG Rich Menu image at 2500x1686 with the six labels above.
+3. Run the sync command from the repo root or inside the API container with the image path available.
+4. Confirm Admin `/line` shows active valid users as `可接收通知`.
+5. If zero users are linked, verify the stored IDs start with `U` and are 33 characters total.
+6. If image upload fails, verify the file type and dimensions.
+7. If menu taps return `操作資料無效`, rerun sync so current `v=1` postbacks are installed.
+
+## Updated Booking Card UX
+
+Booking push notifications and booking search details use a reusable Flex Message. The card shows booking status, booking ID, source, room, check-in/check-out, number of nights when practical, guest name, guest count, guest phone, optional guest-facing LINE ID, total price, short note, and notification context when relevant.
+
+Primary buttons are state-aware. Pending bookings can show confirmation and cancellation actions; confirmed bookings expose check-in, modify, and cancellation paths; checked-in bookings expose check-out; checked-out, cancelled, and no-show bookings are view-only. Visible card actions are intentionally limited to `查看詳情`, `確認訂房` when valid, `撥打電話` when a safe phone URI can be built, and `更多操作`.
+
+Secondary actions use Quick Replies where LINE supports them:
+
+- copy phone number
+- copy guest-facing LINE ID, only when `Booking.guestLineId` contains real data
+- copy a concise booking summary
+- add internal note
+- open the full Admin booking page
+
+Phone links are normalized and validated before creating a `tel:` URI. Arbitrary guest input is never inserted directly into a URI. Guest-facing LINE IDs are treated as plain contact text for clipboard copy only; they are not Messaging API `U...` IDs and are not the Official Account `@gps2290j` ID. The bot does not invent personal LINE deep links.
+
+Search results are capped into a Flex carousel rather than many separate booking messages. Rich Menu dashboard, room price, and announcement views use compact Flex cards for scannable mobile display. Unknown commands return concise command help instead of repeated menu cards.
+
+## Quick Replies and Date Pickers
+
+Contextual Quick Replies are used only where relevant:
+
+- Booking management: `待確認`, `今日入住`, `七日內訂房`, `搜尋訂房`, `返回`.
+- Blocked dates: `查看封鎖`, `封鎖單一房型`, `封鎖全部房型`, `解除封鎖`, `返回`.
+- Room management: `平日房價`, `週末房價`, `假日房價`, `房型開關`, `返回`.
+
+Rich Menu date flows use LINE date-picker postbacks for booking check-in/check-out and blocked-date start/end. Booking creation continues with postback room selection, postback guest count selection, a short text prompt for guest contact details, and a final confirmation postback before mutation. Temporary multi-step state is stored in Redis with expiration. Final mutations still re-read current database state, validate authorization, use shared booking/blocked-date rules, and write audit logs.
+
+Text commands remain available for LINE desktop and recovery workflows. The normal mobile booking-create flow no longer requires typing ISO dates.

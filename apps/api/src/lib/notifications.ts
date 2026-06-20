@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import type { Booking, Prisma, Room } from '@8688bnb/db';
 import { db } from '@8688bnb/db';
 import { config } from './config';
+import { bookingFlexMessage } from './line-ui';
 
 type BookingWithRoom = Booking & { room?: Room | null };
 type NotificationChannel = 'line' | 'email';
@@ -297,58 +298,24 @@ async function sendLineNotification(payload: BookingNotificationPayload) {
 }
 
 function lineFlexMessage(payload: BookingNotificationPayload) {
-  const title = payload.event_type === 'booking.created' && payload.source === 'website' ? '官網訂房通知' : formatEventType(payload.event_type);
-  const rows = [
-    ['訂單', `#${payload.booking_id}`],
-    ['來源', formatSource(payload.source)],
-    ['房型', payload.room],
-    ['入住', `${payload.check_in} ~ ${payload.check_out}`],
-    ['房客', payload.guest_name],
-    ['電話', payload.guest_phone],
-    ['人數', `${payload.guest_count} 人`],
-    ['LINE ID', payload.guest_line_id || '未填寫'],
-    ['金額', formatMoney(payload.total_price)],
-    ['狀態', formatStatus(payload.status)],
-    ['備註', payload.notes_summary || '無'],
-  ];
-
-  return {
-    type: 'flex',
-    altText: `${title} #${payload.booking_id}`,
-    contents: {
-      type: 'bubble',
-      body: {
-        type: 'box',
-        layout: 'vertical',
-        spacing: 'md',
-        contents: [
-          { type: 'text', text: title, weight: 'bold', size: 'lg' },
-          ...rows.map(([label, text]) => ({
-            type: 'box',
-            layout: 'baseline',
-            spacing: 'sm',
-            contents: [
-              { type: 'text', text: label, color: '#666666', size: 'sm', flex: 2 },
-              { type: 'text', text, color: '#111111', size: 'sm', wrap: true, flex: 5 },
-            ],
-          })),
-        ],
-      },
-      footer: {
-        type: 'box',
-        layout: 'vertical',
-        spacing: 'sm',
-        contents: [
-          { type: 'button', style: 'primary', action: { type: 'postback', label: '確認訂房', data: `action=confirm_booking&booking_id=${payload.booking_id}` } },
-          { type: 'button', action: { type: 'uri', label: '查看詳情', uri: payload.admin_url } },
-          { type: 'button', action: { type: 'postback', label: '新增內部備註', data: `action=add_internal_note&booking_id=${payload.booking_id}` } },
-          { type: 'button', style: 'secondary', action: { type: 'postback', label: '取消訂房', data: `action=cancel_booking&booking_id=${payload.booking_id}` } },
-          { type: 'button', action: { type: 'uri', label: '開啟後台', uri: config.PUBLIC_ADMIN_URL } },
-        ],
-      },
-    },
-  };
+  return bookingFlexMessage({
+    id: payload.booking_id,
+    source: payload.source,
+    room: payload.room,
+    checkIn: payload.check_in,
+    checkOut: payload.check_out,
+    guestName: payload.guest_name,
+    guestPhone: payload.guest_phone,
+    guestLineId: payload.guest_line_id,
+    guestCount: payload.guest_count,
+    totalPrice: payload.total_price,
+    status: payload.status,
+    notes: payload.notes_summary,
+    notificationStatus: formatEventType(payload.event_type),
+    adminUrl: payload.admin_url,
+  });
 }
+export const __notificationTest = { lineFlexMessage, channelsForEvent };
 
 async function sendEmailNotification(payload: BookingNotificationPayload) {
   const recipients = parseCsv(config.BOOKING_NOTIFICATION_EMAILS);

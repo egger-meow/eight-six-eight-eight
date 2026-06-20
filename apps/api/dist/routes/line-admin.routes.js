@@ -45,6 +45,9 @@ const csrf_1 = require("../middleware/csrf");
 const config_1 = require("../lib/config");
 const notifications_1 = require("../lib/notifications");
 const booking_rules_1 = require("../lib/booking-rules");
+const line_ui_1 = require("../lib/line-ui");
+const line_rich_menu_1 = require("../lib/line-rich-menu");
+const rate_limit_1 = require("../middleware/rate-limit");
 exports.lineAdminWebhookRouter = (0, express_1.Router)();
 const router = (0, express_1.Router)();
 exports.lineAdminWebhookRouter.post('/', express_1.default.raw({ type: 'application/json' }), async (req, res, next) => {
@@ -215,6 +218,7 @@ router.put('/admin/admins/:id/revoke', auth_1.requireAdmin, csrf_1.doubleCsrfPro
             return res.status(403).json({ success: false, error: { code: 'OWNER_PROTECTED', message: 'Owner access cannot be revoked from this endpoint' } });
         }
         const updated = await db_1.db.lineAdmin.update({ where: { id }, data: { active: false } });
+        await safeUnlinkRichMenu(updated.lineUserId);
         res.json({ success: true, data: { id: updated.id, active: updated.active } });
     }
     catch (error) {
@@ -290,7 +294,28 @@ async function tryBindLineAdmin(lineUserId, text) {
             data: { active: false, usedAt: new Date(), usedByLineUserId: lineUserId },
         });
     });
+    await safeLinkRichMenu(lineUserId);
     return true;
+}
+async function safeLinkRichMenu(lineUserId) {
+    if (!config_1.config.LINE_CHANNEL_ACCESS_TOKEN)
+        return;
+    try {
+        await (0, line_rich_menu_1.linkLineAdminRichMenuToUser)(lineUserId);
+    }
+    catch (error) {
+        console.error('Failed to link LINE rich menu', error instanceof Error ? error.message : String(error));
+    }
+}
+async function safeUnlinkRichMenu(lineUserId) {
+    if (!config_1.config.LINE_CHANNEL_ACCESS_TOKEN)
+        return;
+    try {
+        await (0, line_rich_menu_1.unlinkLineAdminRichMenuFromUser)(lineUserId);
+    }
+    catch (error) {
+        console.error('Failed to unlink LINE rich menu', error instanceof Error ? error.message : String(error));
+    }
 }
 async function recordLineAudit(args) {
     const client = args.tx || db_1.db;
@@ -319,6 +344,14 @@ function roomLabel(room) {
 async function handleTextCommand(event, actorLineAdminId) {
     const text = (event.message?.text || '').trim();
     const lower = text.toLowerCase();
+    if (['取消', 'cancel'].includes(lower)) {
+        await clearLineConversationState(actorLineAdminId);
+        await replyText(event.replyToken, '已取消目前操作。');
+        return;
+    }
+    if (await handleConversationText(event.replyToken, actorLineAdminId, text)) {
+        return;
+    }
     if (['儀表板', 'dashboard', '狀態'].includes(lower)) {
         await replyText(event.replyToken, await buildDashboardText());
         return;
@@ -420,21 +453,69 @@ async function handleTextCommand(event, actorLineAdminId) {
         await updateAnnouncementFromLine(event.replyToken, match[1].trim(), match[2].trim(), actorLineAdminId);
         return;
     }
-    await replyText(event.replyToken, commandHelpText());
+    await replyText(event.replyToken, (0, line_ui_1.commandHelpText)());
 }
-function commandHelpText() {
-    return [
-        '可用指令：',
-        '儀表板',
-        '訂單 <訂單ID/姓名/電話>',
-        '確認/取消/入住/退房/未入住 <訂單ID>',
-        '備註 <訂單ID> <內容>',
-        '新增訂房 <房型slug或ID> <入住> <退房> <人數> <姓名> <電話> [金額] [備註]',
-        '修改訂單 <ID> 房型/入住/退房/人數/金額/電話/狀態 <值>',
-        '封鎖列表；封鎖 <房型或全部> <開始> <結束> [原因]；解除封鎖 <ID>',
-        '房型；房況 <房型> <開始> <結束>；房價 <房型> 平日/假日/過年 <金額>；房型開關 <房型> 開/關',
-        '公告；公告更新 <標題>|<內容>',
-    ].join('\n');
+async function dashboardFlexMessage() {
+    const today = todayDate();
+    const sevenDaysLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const [checkIns, checkOuts, occupied, totalRooms, pending, upcoming] = await Promise.all([
+        db_1.db.booking.findMany({ where: { checkIn: today, status: { notIn: ['cancelled', 'no_show'] } }, include: { room: true }, orderBy: { checkIn: 'asc' }, take: 3 }),
+        db_1.db.booking.findMany({ where: { checkOut: today, status: { notIn: ['cancelled', 'no_show'] } }, include: { room: true }, orderBy: { checkOut: 'asc' }, take: 3 }),
+        db_1.db.booking.count({ where: { checkIn: { lte: today }, checkOut: { gt: today }, status: { in: ['confirmed', 'checked_in'] } } }),
+        db_1.db.room.count(),
+        db_1.db.booking.findMany({ where: { status: 'pending' }, include: { room: true }, orderBy: { checkIn: 'asc' }, take: 3 }),
+        db_1.db.booking.findMany({ where: { checkIn: { gte: today, lte: sevenDaysLater }, status: { notIn: ['cancelled', 'no_show'] } }, include: { room: true }, orderBy: { checkIn: 'asc' }, take: 4 }),
+    ]);
+    const rows = [
+        ['今日入住', `${checkIns.length} 筆${formatCompactBookings(checkIns)}`],
+        ['今日退房', `${checkOuts.length} 筆${formatCompactBookings(checkOuts)}`],
+        ['目前入住', `${occupied}/${totalRooms} 間`],
+        ['待確認', `${pending.length} 筆${formatCompactBookings(pending)}`],
+        ['七日內', `${upcoming.length} 筆${formatCompactBookings(upcoming)}`],
+    ];
+    return infoFlexMessage(`今日概況 ${dateOnly(today)}`, rows, line_ui_1.bookingMenuQuickReply);
+}
+async function roomsFlexMessage() {
+    const rooms = await db_1.db.room.findMany({ orderBy: { sortOrder: 'asc' } });
+    const rows = rooms.map((room) => [room.nameZh, `${room.available ? '開放' : '停用'}｜平日 ${money(room.priceWeekday)}｜假日 ${money(room.priceWeekend)}｜過年 ${money(room.priceHoliday)}`]);
+    return infoFlexMessage('房型價格', rows, line_ui_1.roomQuickReply);
+}
+async function announcementFlexMessage() {
+    const announcement = await getAnnouncement();
+    if (!announcement)
+        return infoFlexMessage('網站公告', [['狀態', '目前沒有網站公告。']]);
+    return infoFlexMessage('網站公告', [
+        ['標題', announcement.title],
+        ['內容', announcement.content],
+        ['顯示', announcement.visible ? '是' : '否'],
+    ]);
+}
+function infoFlexMessage(title, rows, quickReplyValue) {
+    return {
+        type: 'flex',
+        altText: title,
+        contents: {
+            type: 'bubble',
+            body: {
+                type: 'box',
+                layout: 'vertical',
+                spacing: 'sm',
+                contents: [
+                    { type: 'text', text: title, weight: 'bold', size: 'lg', wrap: true },
+                    ...rows.slice(0, 8).map(([label, value]) => ({
+                        type: 'box',
+                        layout: 'vertical',
+                        spacing: 'xs',
+                        contents: [
+                            { type: 'text', text: label, color: '#666666', size: 'sm', wrap: true },
+                            { type: 'text', text: value || '無', color: '#111111', size: 'sm', wrap: true },
+                        ],
+                    })),
+                ],
+            },
+        },
+        ...(quickReplyValue ? { quickReply: quickReplyValue } : {}),
+    };
 }
 async function buildDashboardText() {
     const today = todayDate();
@@ -484,48 +565,42 @@ async function replyBookingSearch(replyToken, query) {
         await replyMessages(replyToken, [bookingDetailFlex(bookings[0])]);
         return;
     }
-    await replyText(replyToken, bookings.map((booking) => `#${booking.id} ${dateOnly(booking.checkIn)}~${dateOnly(booking.checkOut)} ${booking.guestName} ${booking.guestPhone} ${booking.status}`).join('\n'));
+    await replyMessages(replyToken, [(0, line_ui_1.bookingCarouselMessage)(bookings.map((booking) => bookingCardInput(booking)))]);
 }
-function bookingDetailFlex(booking) {
-    const rows = [
-        ['訂單', `#${booking.id}`],
-        ['房型', roomLabel(booking.room)],
-        ['日期', `${dateOnly(booking.checkIn)} ~ ${dateOnly(booking.checkOut)}`],
-        ['房客', booking.guestName],
-        ['電話', booking.guestPhone],
-        ['LINE', booking.guestLineId || '未填寫'],
-        ['人數', `${booking.guestCount} 人`],
-        ['金額', money(booking.totalPrice)],
-        ['狀態', booking.status],
-        ['來源', booking.source],
-        ['備註', booking.notes || '無'],
-    ];
+async function replyBookingSearchScope(replyToken, scope) {
+    const today = todayDate();
+    const sevenDaysLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const where = scope === 'today_checkin'
+        ? { checkIn: today, status: { notIn: ['cancelled', 'no_show'] } }
+        : scope === 'next_7_days'
+            ? { checkIn: { gte: today, lte: sevenDaysLater }, status: { notIn: ['cancelled', 'no_show'] } }
+            : { status: 'pending' };
+    const bookings = await db_1.db.booking.findMany({ where, include: { room: true, internalNotes: { orderBy: { createdAt: 'desc' }, take: 1 } }, orderBy: { checkIn: 'asc' }, take: 5 });
+    if (bookings.length === 0) {
+        await replyText(replyToken, '目前沒有符合的訂房。', line_ui_1.bookingMenuQuickReply);
+        return;
+    }
+    await replyMessages(replyToken, [(0, line_ui_1.bookingCarouselMessage)(bookings.map((booking) => bookingCardInput(booking)))]);
+}
+function bookingDetailFlex(booking, notificationStatus) {
+    return (0, line_ui_1.bookingFlexMessage)(bookingCardInput(booking, notificationStatus));
+}
+function bookingCardInput(booking, notificationStatus) {
     return {
-        type: 'flex',
-        altText: `訂單 #${booking.id}`,
-        contents: {
-            type: 'bubble',
-            body: {
-                type: 'box',
-                layout: 'vertical',
-                spacing: 'sm',
-                contents: [
-                    { type: 'text', text: `訂單 #${booking.id}`, weight: 'bold', size: 'lg' },
-                    ...rows.map(([label, value]) => ({ type: 'box', layout: 'baseline', spacing: 'sm', contents: [
-                            { type: 'text', text: label, color: '#666666', size: 'sm', flex: 2 },
-                            { type: 'text', text: value, color: '#111111', size: 'sm', wrap: true, flex: 5 },
-                        ] })),
-                ],
-            },
-            footer: { type: 'box', layout: 'vertical', spacing: 'sm', contents: [
-                    { type: 'button', style: 'primary', action: { type: 'postback', label: '確認訂房', data: `action=confirm_booking&booking_id=${booking.id}` } },
-                    { type: 'button', action: { type: 'postback', label: '辦理入住', data: `action=check_in&booking_id=${booking.id}` } },
-                    { type: 'button', action: { type: 'postback', label: '辦理退房', data: `action=check_out&booking_id=${booking.id}` } },
-                    { type: 'button', action: { type: 'postback', label: '標記未入住', data: `action=no_show&booking_id=${booking.id}` } },
-                    { type: 'button', style: 'secondary', action: { type: 'postback', label: '取消訂房', data: `action=cancel_booking&booking_id=${booking.id}` } },
-                    { type: 'button', action: { type: 'uri', label: '開啟後台', uri: `${config_1.config.PUBLIC_ADMIN_URL.replace(/\/$/, '')}/bookings?booking=${booking.id}` } },
-                ] },
-        },
+        id: booking.id,
+        status: booking.status,
+        source: booking.source,
+        room: roomLabel(booking.room),
+        checkIn: dateOnly(booking.checkIn),
+        checkOut: dateOnly(booking.checkOut),
+        guestName: booking.guestName,
+        guestCount: booking.guestCount,
+        guestPhone: booking.guestPhone,
+        guestLineId: booking.guestLineId || null,
+        totalPrice: booking.totalPrice,
+        notes: booking.notes || booking.internalNotes?.[0]?.content || null,
+        notificationStatus: notificationStatus || null,
+        adminUrl: config_1.config.PUBLIC_ADMIN_URL.replace(/\/$/, '') + '/bookings?booking=' + booking.id,
     };
 }
 async function validateBookingStateTransition(booking, status) {
@@ -604,12 +679,19 @@ async function createBookingFromLine(replyToken, args) {
         return;
     }
     const eventId = await db_1.db.$transaction(async (tx) => {
+        const freshRoom = await findRoomByRef(args.roomRef, tx);
+        if (!freshRoom)
+            throw new Error('房型不存在。');
+        const txInvalid = await validateBookingSchedule({ tx, roomId: freshRoom.id, checkIn, checkOut, guestCount: args.guestCount });
+        if (txInvalid)
+            throw new Error(txInvalid);
         const booking = await tx.booking.create({ data: {
-                roomId: room.id,
+                roomId: freshRoom.id,
                 checkIn,
                 checkOut,
                 guestName: args.guestName,
                 guestPhone: args.guestPhone,
+                guestLineId: args.guestLineId || null,
                 guestCount: args.guestCount,
                 totalPrice: args.totalPrice ?? null,
                 notes: args.notes || null,
@@ -619,10 +701,14 @@ async function createBookingFromLine(replyToken, args) {
         await tx.bookingNote.create({ data: { bookingId: booking.id, content: `LINE 管理員 #${args.actorLineAdminId} 建立訂單` } });
         await recordLineAudit({ tx, lineAdminId: args.actorLineAdminId, action: 'booking.create', entityType: 'booking', entityId: booking.id, detail: { source: 'line' } });
         return (0, notifications_1.createBookingNotificationEvent)({ tx, booking, eventType: 'booking.created', dedupeKey: `booking.created:${booking.id}`, source: 'line', actorLineAdminId: args.actorLineAdminId });
+    }).catch(async (error) => {
+        await replyText(replyToken, error instanceof Error ? error.message : '建立訂房失敗。');
+        return null;
     });
-    if (eventId)
-        (0, notifications_1.kickNotificationWorker)();
-    await replyText(replyToken, '已建立訂單。系統會寄送 Email 通知，並避免對建立者重複 LINE Push。');
+    if (!eventId)
+        return;
+    (0, notifications_1.kickNotificationWorker)();
+    await replyText(replyToken, '已建立訂房。');
 }
 async function updateBookingFieldFromLine(replyToken, bookingId, field, value, actorLineAdminId) {
     const existing = await db_1.db.booking.findUnique({ where: { id: bookingId }, include: { room: true } });
@@ -688,6 +774,28 @@ async function updateBookingFieldFromLine(replyToken, bookingId, field, value, a
     (0, notifications_1.kickNotificationWorker)();
     await replyText(replyToken, `訂單 #${bookingId} 已更新。`);
 }
+async function validateBlockedDateConflict(args) {
+    if (!(args.start instanceof Date) || Number.isNaN(args.start.getTime()) || !(args.end instanceof Date) || Number.isNaN(args.end.getTime())) {
+        return '日期格式無效。';
+    }
+    if (args.start >= args.end)
+        return '結束日期必須晚於開始日期。';
+    const client = args.tx || db_1.db;
+    const conflict = await client.blockedDate.findFirst({
+        where: {
+            startDate: { lt: args.end },
+            endDate: { gt: args.start },
+            OR: args.roomId === null
+                ? [{ roomId: null }, { roomId: { not: null } }]
+                : [{ roomId: null }, { roomId: args.roomId }],
+        },
+        include: { room: true },
+    });
+    if (!conflict)
+        return null;
+    const target = conflict.room ? roomLabel(conflict.room) : '全部房型';
+    return `已存在重疊封鎖日期：#${conflict.id} ${target} ${dateOnly(conflict.startDate)}~${dateOnly(conflict.endDate)}`;
+}
 async function buildBlockedDatesText() {
     const today = todayDate();
     const blocks = await db_1.db.blockedDate.findMany({ where: { endDate: { gte: today } }, include: { room: true }, orderBy: { startDate: 'asc' }, take: 10 });
@@ -705,16 +813,31 @@ async function createBlockedDateFromLine(replyToken, roomRef, start, end, reason
         await replyText(replyToken, '房型不存在。');
         return;
     }
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const conflict = await validateBlockedDateConflict({ roomId: room.id, start: startDate, end: endDate });
+    if (conflict) {
+        await replyText(replyToken, conflict);
+        return;
+    }
     const block = await db_1.db.$transaction(async (tx) => {
-        const created = await tx.blockedDate.create({ data: { roomId: room.id, startDate: new Date(start), endDate: new Date(end), reason: `${reason}（LINE 管理員 #${actorLineAdminId}）` } });
+        const txConflict = await validateBlockedDateConflict({ tx, roomId: room.id, start: startDate, end: endDate });
+        if (txConflict)
+            throw new Error(txConflict);
+        const created = await tx.blockedDate.create({ data: { roomId: room.id, startDate, endDate, reason: `${reason}（LINE 管理員 #${actorLineAdminId}）` } });
         await recordLineAudit({ tx, lineAdminId: actorLineAdminId, action: 'blocked_date.create', entityType: 'blocked_date', entityId: created.id, detail: { room_id: room.id, start, end } });
         return created;
+    }).catch(async (error) => {
+        await replyText(replyToken, error instanceof Error ? error.message : '封鎖日期失敗。');
+        return null;
     });
-    await replyText(replyToken, `已封鎖 ${roomLabel(room)}：#${block.id} ${start}~${end}`);
+    if (!block)
+        return;
+    await replyText(replyToken, `已封鎖指定日期 #${block.id}`);
 }
 async function replyConfirmCreateAllBlock(replyToken, start, end, reason) {
     await replyMessages(replyToken, [{ type: 'template', altText: '確認封鎖全部房型', template: { type: 'confirm', text: `確認封鎖全部房型 ${start}~${end}？`, actions: [
-                    { type: 'postback', label: '確認封鎖', data: `action=create_block&room=all&start=${start}&end=${end}&reason=${encodeURIComponent(reason).slice(0, 120)}` },
+                    { type: 'postback', label: '確認封鎖', data: line_ui_1.linePostbacks.createBlock(start, end, reason) },
                     { type: 'message', label: '取消', text: '取消' },
                 ] } }]);
 }
@@ -725,7 +848,7 @@ async function replyConfirmRemoveBlock(replyToken, blockId) {
         return;
     }
     await replyMessages(replyToken, [{ type: 'template', altText: '確認解除封鎖', template: { type: 'confirm', text: `確認解除 #${block.id} ${block.room ? roomLabel(block.room) : '全部房型'} ${dateOnly(block.startDate)}~${dateOnly(block.endDate)}？`, actions: [
-                    { type: 'postback', label: '確認解除', data: `action=remove_block&block_id=${block.id}` },
+                    { type: 'postback', label: '確認解除', data: line_ui_1.linePostbacks.removeBlock(block.id) },
                     { type: 'message', label: '取消', text: '取消' },
                 ] } }]);
 }
@@ -788,11 +911,255 @@ async function updateAnnouncementFromLine(replyToken, title, content, actorLineA
     });
     await replyText(replyToken, `LINE 管理員 #${actorLineAdminId} 已更新網站公告。`);
 }
+async function handleConversationText(replyToken, actorLineAdminId, text) {
+    const state = await getLineConversationState(actorLineAdminId);
+    if (!state || state.flow !== 'booking_create' || state.step !== 'guest_details')
+        return false;
+    const details = parseBookingGuestDetails(text);
+    if (!details) {
+        await replyText(replyToken, '請輸入：姓名 電話 [LINE ID] [備註]。例如：王小明 0920900793 guest_line 晚到');
+        return true;
+    }
+    const nextState = { ...state, ...details, step: 'confirm' };
+    await setLineConversationState(actorLineAdminId, nextState);
+    await replyBookingCreatePreview(replyToken, nextState);
+    return true;
+}
+function parseBookingGuestDetails(text) {
+    const parts = text.trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 2)
+        return null;
+    const [guestName, guestPhone, maybeLineId, ...noteParts] = parts;
+    if (!guestName || !guestPhone)
+        return null;
+    const guestLineId = maybeLineId && !/^[-–—]$/.test(maybeLineId) ? maybeLineId : null;
+    return {
+        guestName,
+        guestPhone,
+        guestLineId,
+        notes: noteParts.join(' ') || null,
+    };
+}
+async function replyBookingRoomChoices(replyToken, actorLineAdminId, state) {
+    const rooms = await db_1.db.room.findMany({ where: { available: true }, orderBy: { sortOrder: 'asc' }, take: 10 });
+    if (rooms.length === 0) {
+        await clearLineConversationState(actorLineAdminId);
+        await replyText(replyToken, '目前沒有開放中的房型。');
+        return;
+    }
+    await replyText(replyToken, '請選擇房型。', (0, line_ui_1.postbackQuickReply)(rooms.map((room) => ({ label: room.nameZh.slice(0, 20), data: line_ui_1.linePostbacks.bookingRoom(room.slug) }))));
+}
+async function replyGuestCountChoices(replyToken, room) {
+    const capacity = Math.max(1, Math.min(Number(room.capacity) || 1, 10));
+    const labels = Array.from({ length: capacity }, (_, index) => {
+        const count = index + 1;
+        return { label: `${count} 人`, data: line_ui_1.linePostbacks.bookingGuests(count) };
+    });
+    await replyText(replyToken, '請選擇入住人數。', (0, line_ui_1.postbackQuickReply)(labels));
+}
+async function replyBookingCreatePreview(replyToken, state) {
+    const room = state.roomRef ? await findRoomByRef(state.roomRef) : null;
+    const roomText = room ? roomLabel(room) : state.roomRef || '未選擇';
+    const summary = [
+        '請確認新增訂房：',
+        `房型：${roomText}`,
+        `日期：${state.checkIn} ~ ${state.checkOut}`,
+        `人數：${state.guestCount || 0} 人`,
+        `房客：${state.guestName}`,
+        `電話：${state.guestPhone}`,
+        state.guestLineId ? `LINE ID：${state.guestLineId}` : null,
+        state.notes ? `備註：${state.notes}` : null,
+    ].filter(Boolean).join('\n');
+    await replyMessages(replyToken, [{ type: 'template', altText: '確認新增訂房', template: { type: 'confirm', text: summary.slice(0, 240), actions: [
+                    { type: 'postback', label: '確認建立', data: line_ui_1.linePostbacks.bookingConfirmCreate },
+                    { type: 'postback', label: '取消', data: line_ui_1.linePostbacks.bookingCancelCreate },
+                ] } }]);
+}
+async function createBookingFromConversation(replyToken, actorLineAdminId, state) {
+    if (!state.roomRef || !state.checkIn || !state.checkOut || !state.guestCount || !state.guestName || !state.guestPhone) {
+        await replyText(replyToken, '訂房資料不完整，請重新新增訂房。');
+        return;
+    }
+    await createBookingFromLine(replyToken, {
+        roomRef: state.roomRef,
+        checkIn: state.checkIn,
+        checkOut: state.checkOut,
+        guestCount: state.guestCount,
+        guestName: state.guestName,
+        guestPhone: state.guestPhone,
+        guestLineId: state.guestLineId || null,
+        notes: state.notes || undefined,
+        actorLineAdminId,
+    });
+}
 async function handlePostback(event, actorLineAdminId) {
-    const params = new URLSearchParams(event.postback?.data || '');
-    const action = params.get('action');
+    const parsed = normalizedPostback(event.postback?.data);
+    if (!parsed) {
+        await replyText(event.replyToken, '操作資料無效，請重新點選。');
+        return;
+    }
+    const { action, params } = parsed;
+    if (action === 'dashboard') {
+        await replyMessages(event.replyToken, [await dashboardFlexMessage()]);
+        return;
+    }
+    if (action === 'booking_menu') {
+        await replyText(event.replyToken, '訂房管理', line_ui_1.bookingMenuQuickReply);
+        return;
+    }
+    if (action === 'booking_create') {
+        await setLineConversationState(actorLineAdminId, { flow: 'booking_create', step: 'check_in' });
+        await replyText(event.replyToken, '請選擇入住日期。', (0, line_ui_1.datePickerQuickReply)([{ label: '入住日期', data: 'v=1&a=booking_checkin' }]));
+        return;
+    }
+    if (action === 'booking_checkin') {
+        const selected = event.postback?.params?.date;
+        if (!selected) {
+            await replyText(event.replyToken, '請重新選擇入住日期。');
+            return;
+        }
+        await setLineConversationState(actorLineAdminId, { flow: 'booking_create', step: 'check_out', checkIn: selected });
+        await replyText(event.replyToken, '請選擇退房日期。', (0, line_ui_1.datePickerQuickReply)([{ label: '退房日期', data: 'v=1&a=booking_checkout' }]));
+        return;
+    }
+    if (action === 'booking_checkout') {
+        const selected = event.postback?.params?.date;
+        if (!selected) {
+            await replyText(event.replyToken, '請重新選擇退房日期。');
+            return;
+        }
+        const state = await getLineConversationState(actorLineAdminId);
+        if (!state?.checkIn) {
+            await replyText(event.replyToken, '訂房流程已逾時，請重新新增訂房。');
+            return;
+        }
+        const nextState = { ...state, flow: 'booking_create', step: 'room', checkOut: selected };
+        await setLineConversationState(actorLineAdminId, nextState);
+        await replyBookingRoomChoices(event.replyToken, actorLineAdminId, nextState);
+        return;
+    }
+    if (action === 'booking_room') {
+        const roomRef = params.get('room');
+        const state = await getLineConversationState(actorLineAdminId);
+        if (!roomRef || !state?.checkIn || !state.checkOut) {
+            await replyText(event.replyToken, '訂房流程已逾時，請重新新增訂房。');
+            return;
+        }
+        const room = await findRoomByRef(roomRef);
+        if (!room) {
+            await replyText(event.replyToken, '房型不存在，請重新選擇。');
+            await replyBookingRoomChoices(event.replyToken, actorLineAdminId, state);
+            return;
+        }
+        const invalid = await validateBookingSchedule({ roomId: room.id, checkIn: new Date(state.checkIn), checkOut: new Date(state.checkOut), guestCount: 1 });
+        if (invalid) {
+            await replyText(event.replyToken, invalid);
+            await replyBookingRoomChoices(event.replyToken, actorLineAdminId, state);
+            return;
+        }
+        await setLineConversationState(actorLineAdminId, { ...state, step: 'guest_count', roomRef, roomId: room.id });
+        await replyGuestCountChoices(event.replyToken, room);
+        return;
+    }
+    if (action === 'booking_guests') {
+        const guestCount = Number(params.get('count'));
+        const state = await getLineConversationState(actorLineAdminId);
+        if (!Number.isInteger(guestCount) || guestCount <= 0 || !state?.roomRef || !state.checkIn || !state.checkOut) {
+            await replyText(event.replyToken, '訂房流程已逾時，請重新新增訂房。');
+            return;
+        }
+        const room = await findRoomByRef(state.roomRef);
+        if (!room) {
+            await replyText(event.replyToken, '房型不存在，請重新新增訂房。');
+            return;
+        }
+        const invalid = await validateBookingSchedule({ roomId: room.id, checkIn: new Date(state.checkIn), checkOut: new Date(state.checkOut), guestCount });
+        if (invalid) {
+            await replyText(event.replyToken, invalid);
+            await replyGuestCountChoices(event.replyToken, room);
+            return;
+        }
+        await setLineConversationState(actorLineAdminId, { ...state, step: 'guest_details', guestCount });
+        await replyText(event.replyToken, '請輸入房客資料：姓名 電話 [LINE ID] [備註]。例如：王小明 0920900793 guest_line 晚到');
+        return;
+    }
+    if (action === 'booking_confirm_create') {
+        const state = await getLineConversationState(actorLineAdminId);
+        if (!state || state.flow !== 'booking_create' || state.step !== 'confirm') {
+            await replyText(event.replyToken, '訂房流程已逾時，請重新新增訂房。');
+            return;
+        }
+        await createBookingFromConversation(event.replyToken, actorLineAdminId, state);
+        await clearLineConversationState(actorLineAdminId);
+        return;
+    }
+    if (action === 'booking_cancel_create') {
+        await clearLineConversationState(actorLineAdminId);
+        await replyText(event.replyToken, '已取消新增訂房。');
+        return;
+    }
+    if (action === 'booking_search') {
+        await replyBookingSearchScope(event.replyToken, params.get('scope') || 'pending');
+        return;
+    }
+    if (action === 'blocked_menu') {
+        await replyText(event.replyToken, '封鎖日期管理', line_ui_1.blockedDateQuickReply);
+        return;
+    }
+    if (action === 'block_room_start' || action === 'block_all_start') {
+        await setLineConversationState(actorLineAdminId, { flow: action, step: 'start' });
+        await replyText(event.replyToken, '請選擇封鎖開始日期。', (0, line_ui_1.datePickerQuickReply)([{ label: '開始日期', data: 'v=1&a=blocked_start' }]));
+        return;
+    }
+    if (action === 'blocked_start') {
+        const selected = event.postback?.params?.date;
+        if (!selected) {
+            await replyText(event.replyToken, '請重新選擇開始日期。');
+            return;
+        }
+        const state = await getLineConversationState(actorLineAdminId);
+        await setLineConversationState(actorLineAdminId, { ...(state || {}), step: 'end', start: selected });
+        await replyText(event.replyToken, '請選擇封鎖結束日期。', (0, line_ui_1.datePickerQuickReply)([{ label: '結束日期', data: 'v=1&a=blocked_end' }]));
+        return;
+    }
+    if (action === 'blocked_end') {
+        const selected = event.postback?.params?.date;
+        if (!selected) {
+            await replyText(event.replyToken, '請重新選擇結束日期。');
+            return;
+        }
+        const state = await getLineConversationState(actorLineAdminId);
+        if (state?.flow === 'block_all_start' && state.start) {
+            await replyConfirmCreateAllBlock(event.replyToken, state.start, selected, 'LINE 管理封鎖');
+            return;
+        }
+        await replyText(event.replyToken, '日期已選擇。請用文字補齊：封鎖 <房型slug或ID> ' + (state?.start || '<開始>') + ' ' + selected + ' [原因]');
+        return;
+    }
+    if (action === 'room_menu') {
+        await replyMessages(event.replyToken, [await roomsFlexMessage()]);
+        return;
+    }
+    if (action === 'announcement') {
+        await replyMessages(event.replyToken, [await announcementFlexMessage()]);
+        return;
+    }
+    if (action === 'booking_more') {
+        const bookingId = Number(params.get('bid') || params.get('booking_id'));
+        if (!bookingId) {
+            await replyText(event.replyToken, '訂單資料無效。');
+            return;
+        }
+        const booking = await db_1.db.booking.findUnique({ where: { id: bookingId }, include: { room: true, internalNotes: { orderBy: { createdAt: 'desc' }, take: 1 } } });
+        if (!booking) {
+            await replyText(event.replyToken, '找不到此訂單。');
+            return;
+        }
+        await replyText(event.replyToken, `訂房 #${booking.id} 更多操作`, (0, line_ui_1.bookingMoreQuickReply)(bookingCardInput(booking)));
+        return;
+    }
     if (action === 'confirm_booking' || action === 'cancel_booking' || action === 'check_in' || action === 'check_out' || action === 'no_show') {
-        const bookingId = Number(params.get('booking_id'));
+        const bookingId = Number(params.get('bid') || params.get('booking_id'));
         if (!bookingId) {
             await replyText(event.replyToken, '訂單資料無效。');
             return;
@@ -833,11 +1200,11 @@ async function handlePostback(event, actorLineAdminId) {
         });
         if (eventId)
             (0, notifications_1.kickNotificationWorker)();
-        await replyText(event.replyToken, `已將訂單 #${bookingId} 更新為 ${status}。`);
+        await replyText(event.replyToken, status === 'confirmed' ? `已確認訂房 #${bookingId}` : status === 'cancelled' ? `已取消訂房 #${bookingId}` : `訂房 #${bookingId} 已更新為 ${status}`);
         return;
     }
     if (action === 'add_internal_note') {
-        const bookingId = Number(params.get('booking_id'));
+        const bookingId = Number(params.get('bid') || params.get('booking_id'));
         if (!bookingId) {
             await replyText(event.replyToken, '訂單資料無效。');
             return;
@@ -845,20 +1212,40 @@ async function handlePostback(event, actorLineAdminId) {
         await replyText(event.replyToken, `請輸入：備註 ${bookingId} <內容>`);
         return;
     }
+    if (action === 'modify_booking') {
+        const bookingId = Number(params.get('bid') || params.get('booking_id'));
+        await replyText(event.replyToken, bookingId ? `請輸入：修改訂單 ${bookingId} 房型/入住/退房/人數/金額/電話/狀態 <值>` : '訂單資料無效。');
+        return;
+    }
     if (action === 'create_block') {
         const start = params.get('start');
         const end = params.get('end');
-        const reason = decodeURIComponent(params.get('reason') || 'LINE 管理封鎖');
+        const reason = params.get('reason') || 'LINE 管理封鎖';
         if (!start || !end) {
             await replyText(event.replyToken, '封鎖資料無效。');
             return;
         }
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const conflict = await validateBlockedDateConflict({ roomId: null, start: startDate, end: endDate });
+        if (conflict) {
+            await replyText(event.replyToken, conflict);
+            return;
+        }
         const block = await db_1.db.$transaction(async (tx) => {
-            const created = await tx.blockedDate.create({ data: { roomId: null, startDate: new Date(start), endDate: new Date(end), reason: `${reason}（LINE 管理員 #${actorLineAdminId}）` } });
+            const txConflict = await validateBlockedDateConflict({ tx, roomId: null, start: startDate, end: endDate });
+            if (txConflict)
+                throw new Error(txConflict);
+            const created = await tx.blockedDate.create({ data: { roomId: null, startDate, endDate, reason: `${reason}（LINE 管理員 #${actorLineAdminId}）` } });
             await recordLineAudit({ tx, lineAdminId: actorLineAdminId, action: 'blocked_date.create_all', entityType: 'blocked_date', entityId: created.id, detail: { start, end } });
             return created;
+        }).catch(async (error) => {
+            await replyText(event.replyToken, error instanceof Error ? error.message : '封鎖日期失敗。');
+            return null;
         });
-        await replyText(event.replyToken, `已封鎖全部房型：#${block.id} ${start}~${end}`);
+        if (!block)
+            return;
+        await replyText(event.replyToken, `已封鎖指定日期 #${block.id}`);
         return;
     }
     if (action === 'remove_block') {
@@ -877,6 +1264,39 @@ async function handlePostback(event, actorLineAdminId) {
     }
     await replyText(event.replyToken, '尚未支援此操作。');
 }
+function normalizedPostback(data) {
+    const parsed = (0, line_ui_1.parseLinePostback)(data);
+    if (parsed.ok)
+        return { action: parsed.action, params: parsed.params };
+    const legacy = new URLSearchParams(data || '');
+    const legacyAction = legacy.get('action');
+    if (legacyAction && /^[a-z][a-z0-9_]{1,40}$/.test(legacyAction))
+        return { action: legacyAction, params: legacy };
+    return null;
+}
+async function setLineConversationState(actorLineAdminId, state) {
+    if (!rate_limit_1.redisClient.isOpen)
+        return;
+    await rate_limit_1.redisClient.setEx(`line:conversation:${actorLineAdminId}`, 15 * 60, JSON.stringify(state));
+}
+async function getLineConversationState(actorLineAdminId) {
+    if (!rate_limit_1.redisClient.isOpen)
+        return null;
+    const value = await rate_limit_1.redisClient.get(`line:conversation:${actorLineAdminId}`);
+    if (!value)
+        return null;
+    try {
+        return JSON.parse(value);
+    }
+    catch {
+        return null;
+    }
+}
+async function clearLineConversationState(actorLineAdminId) {
+    if (!rate_limit_1.redisClient.isOpen)
+        return;
+    await rate_limit_1.redisClient.del(`line:conversation:${actorLineAdminId}`);
+}
 async function replyMessages(replyToken, messages) {
     if (!replyToken || !config_1.config.LINE_CHANNEL_ACCESS_TOKEN)
         return;
@@ -889,8 +1309,8 @@ async function replyMessages(replyToken, messages) {
         body: JSON.stringify({ replyToken, messages }),
     });
 }
-async function replyText(replyToken, text) {
-    await replyMessages(replyToken, [{ type: 'text', text: text.slice(0, 4500) }]);
+async function replyText(replyToken, text, quickReplyValue) {
+    await replyMessages(replyToken, [(0, line_ui_1.textMessage)(text, quickReplyValue)]);
 }
 function generateBindingCode(role) {
     const random = crypto_1.default.randomBytes(5).toString('hex').toUpperCase();

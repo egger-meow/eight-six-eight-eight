@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.__notificationTest = void 0;
 exports.isLineUserId = isLineUserId;
 exports.createBookingNotificationEvent = createBookingNotificationEvent;
 exports.kickNotificationWorker = kickNotificationWorker;
@@ -12,6 +13,7 @@ exports.processDueNotifications = processDueNotifications;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const db_1 = require("@8688bnb/db");
 const config_1 = require("./config");
+const line_ui_1 = require("./line-ui");
 let workerTimer = null;
 let workerRunning = false;
 function dateOnly(value) {
@@ -251,57 +253,24 @@ async function sendLineNotification(payload) {
     return `line:${admins.length}`;
 }
 function lineFlexMessage(payload) {
-    const title = payload.event_type === 'booking.created' && payload.source === 'website' ? '官網訂房通知' : formatEventType(payload.event_type);
-    const rows = [
-        ['訂單', `#${payload.booking_id}`],
-        ['來源', formatSource(payload.source)],
-        ['房型', payload.room],
-        ['入住', `${payload.check_in} ~ ${payload.check_out}`],
-        ['房客', payload.guest_name],
-        ['電話', payload.guest_phone],
-        ['人數', `${payload.guest_count} 人`],
-        ['LINE ID', payload.guest_line_id || '未填寫'],
-        ['金額', formatMoney(payload.total_price)],
-        ['狀態', formatStatus(payload.status)],
-        ['備註', payload.notes_summary || '無'],
-    ];
-    return {
-        type: 'flex',
-        altText: `${title} #${payload.booking_id}`,
-        contents: {
-            type: 'bubble',
-            body: {
-                type: 'box',
-                layout: 'vertical',
-                spacing: 'md',
-                contents: [
-                    { type: 'text', text: title, weight: 'bold', size: 'lg' },
-                    ...rows.map(([label, text]) => ({
-                        type: 'box',
-                        layout: 'baseline',
-                        spacing: 'sm',
-                        contents: [
-                            { type: 'text', text: label, color: '#666666', size: 'sm', flex: 2 },
-                            { type: 'text', text, color: '#111111', size: 'sm', wrap: true, flex: 5 },
-                        ],
-                    })),
-                ],
-            },
-            footer: {
-                type: 'box',
-                layout: 'vertical',
-                spacing: 'sm',
-                contents: [
-                    { type: 'button', style: 'primary', action: { type: 'postback', label: '確認訂房', data: `action=confirm_booking&booking_id=${payload.booking_id}` } },
-                    { type: 'button', action: { type: 'uri', label: '查看詳情', uri: payload.admin_url } },
-                    { type: 'button', action: { type: 'postback', label: '新增內部備註', data: `action=add_internal_note&booking_id=${payload.booking_id}` } },
-                    { type: 'button', style: 'secondary', action: { type: 'postback', label: '取消訂房', data: `action=cancel_booking&booking_id=${payload.booking_id}` } },
-                    { type: 'button', action: { type: 'uri', label: '開啟後台', uri: config_1.config.PUBLIC_ADMIN_URL } },
-                ],
-            },
-        },
-    };
+    return (0, line_ui_1.bookingFlexMessage)({
+        id: payload.booking_id,
+        source: payload.source,
+        room: payload.room,
+        checkIn: payload.check_in,
+        checkOut: payload.check_out,
+        guestName: payload.guest_name,
+        guestPhone: payload.guest_phone,
+        guestLineId: payload.guest_line_id,
+        guestCount: payload.guest_count,
+        totalPrice: payload.total_price,
+        status: payload.status,
+        notes: payload.notes_summary,
+        notificationStatus: formatEventType(payload.event_type),
+        adminUrl: payload.admin_url,
+    });
 }
+exports.__notificationTest = { lineFlexMessage, channelsForEvent };
 async function sendEmailNotification(payload) {
     const recipients = parseCsv(config_1.config.BOOKING_NOTIFICATION_EMAILS);
     if (recipients.length === 0) {
