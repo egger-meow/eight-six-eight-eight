@@ -228,6 +228,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-86.88 B&B <no-reply@8688bnb.com>}
       BOOKING_NOTIFICATION_EMAILS: ${BOOKING_NOTIFICATION_EMAILS:-}
+    volumes:
+      - api_uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
@@ -289,3 +291,5 @@ volumes:
     name: 8688bnb_postgres_data
   redis_data:
     name: 8688bnb_redis_data
+  api_uploads:
+    name: 8688bnb_api_uploads

@@ -41,6 +41,10 @@ export type AvailabilityResult = {
   to: string;
   conflicts: Array<{ type: string; id?: number; status?: string; reason?: string }>;
   estimated_price: number;
+  pricing_flags?: {
+    special_weekend?: boolean;
+    holiday?: boolean;
+  };
 };
 
 export type BookingPayload = {

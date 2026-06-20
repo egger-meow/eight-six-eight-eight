@@ -14,6 +14,12 @@ type PricingPeriod = {
   pricingType: string | null;
 };
 
+type StayPricingDetails = {
+  totalPrice: number;
+  hasSpecialWeekendRate: boolean;
+  hasHolidayRate: boolean;
+};
+
 type LegacyPricingPeriodRow = {
   name: string;
   startDate: Date;
@@ -69,9 +75,11 @@ export function eachStayDate(checkIn: Date, checkOut: Date) {
   return dates;
 }
 
-export async function calculateStayPrice(room: RoomRates, checkIn: Date, checkOut: Date) {
+export async function calculateStayPricingDetails(room: RoomRates, checkIn: Date, checkOut: Date): Promise<StayPricingDetails> {
   const stayDates = eachStayDate(checkIn, checkOut);
-  if (stayDates.length === 0) return 0;
+  if (stayDates.length === 0) {
+    return { totalPrice: 0, hasSpecialWeekendRate: false, hasHolidayRate: false };
+  }
 
   let periods: PricingPeriod[] = [];
   try {
@@ -90,9 +98,20 @@ export async function calculateStayPrice(room: RoomRates, checkIn: Date, checkOu
     }
   }
 
-  return stayDates.reduce((total, date) => {
+  return stayDates.reduce<StayPricingDetails>((details, date) => {
+    const matchingPeriod = periods.find((period) => date >= period.startDate && date <= period.endDate);
     const specialRate = rateForSpecialDate(room, date, periods);
-    if (specialRate !== null) return total + specialRate;
-    return total + (date.getDay() === 6 ? room.priceWeekend : room.priceWeekday);
-  }, 0);
+    if (matchingPeriod && periodType(matchingPeriod) === 'holiday') {
+      details.hasHolidayRate = true;
+    } else if (matchingPeriod && !isFinalDateInMultiDayWeekendPeriod(date, matchingPeriod)) {
+      details.hasSpecialWeekendRate = true;
+    }
+    details.totalPrice += specialRate ?? (date.getDay() === 6 ? room.priceWeekend : room.priceWeekday);
+    return details;
+  }, { totalPrice: 0, hasSpecialWeekendRate: false, hasHolidayRate: false });
+}
+
+export async function calculateStayPrice(room: RoomRates, checkIn: Date, checkOut: Date) {
+  const details = await calculateStayPricingDetails(room, checkIn, checkOut);
+  return details.totalPrice;
 }

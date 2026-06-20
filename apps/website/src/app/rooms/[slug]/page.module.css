@@ -156,6 +156,18 @@
   color: var(--color-ink-soft);
 }
 
+.priceRow span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.priceRow small {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--color-ink-muted);
+}
+
 .priceRow strong {
   font-family: var(--font-serif);
   font-size: 1.25rem;

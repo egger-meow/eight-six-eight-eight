@@ -73,7 +73,10 @@ app.use('/api/v1/line/admin/webhook', rate_limit_1.generalLimiter, line_admin_ro
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 app.use((0, cookie_parser_1.default)());
-app.use('/uploads', express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
+app.use('/uploads', (_req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+    next();
+}, express_1.default.static(path_1.default.join(process.cwd(), 'uploads')));
 // ── Health Check (No rate limiting needed)
 app.get('/api/v1/health', async (req, res) => {
     let dbStatus = 'error';

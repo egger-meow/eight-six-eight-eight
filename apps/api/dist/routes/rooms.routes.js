@@ -249,7 +249,7 @@ router.get('/:slug/availability', (0, validate_1.validateParams)(common_schema_1
             });
         }
         const available = conflicts.length === 0;
-        const estimatedPrice = await (0, pricing_1.calculateStayPrice)(room, from, to);
+        const pricingDetails = await (0, pricing_1.calculateStayPricingDetails)(room, from, to);
         res.json({
             success: true,
             data: {
@@ -258,7 +258,11 @@ router.get('/:slug/availability', (0, validate_1.validateParams)(common_schema_1
                 from: fromStr,
                 to: toStr,
                 conflicts,
-                estimated_price: estimatedPrice
+                estimated_price: pricingDetails.totalPrice,
+                pricing_flags: {
+                    special_weekend: pricingDetails.hasSpecialWeekendRate,
+                    holiday: pricingDetails.hasHolidayRate
+                }
             }
         });
     }

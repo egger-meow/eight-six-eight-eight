@@ -6,7 +6,7 @@ import { RoomCreateSchema, RoomUpdateSchema } from '../schemas/rooms.schema';
 import { DateRangeQuerySchema, SlugParamSchema } from '../schemas/common.schema';
 
 import { db } from '@8688bnb/db';
-import { calculateStayPrice } from '../lib/pricing';
+import { calculateStayPricingDetails } from '../lib/pricing';
 import { bootstrapKnownMediaTargets, bootstrapMediaTarget } from '../lib/media-bootstrap';
 
 const router = Router();
@@ -263,7 +263,7 @@ router.get('/:slug/availability', validateParams(SlugParamSchema), validateQuery
 
     const available = conflicts.length === 0;
 
-    const estimatedPrice = await calculateStayPrice(room, from, to);
+    const pricingDetails = await calculateStayPricingDetails(room, from, to);
 
     res.json({
       success: true,
@@ -273,7 +273,11 @@ router.get('/:slug/availability', validateParams(SlugParamSchema), validateQuery
         from: fromStr,
         to: toStr,
         conflicts,
-        estimated_price: estimatedPrice
+        estimated_price: pricingDetails.totalPrice,
+        pricing_flags: {
+          special_weekend: pricingDetails.hasSpecialWeekendRate,
+          holiday: pricingDetails.hasHolidayRate
+        }
       }
     });
   } catch (error) {

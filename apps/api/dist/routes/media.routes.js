@@ -50,11 +50,13 @@ const db_1 = require("@8688bnb/db");
 const media_bootstrap_1 = require("../lib/media-bootstrap");
 const zod_1 = require("zod");
 const router = (0, express_1.Router)();
+const uploadImageDirectory = path.join(process.cwd(), 'uploads', 'images');
+fs.mkdirSync(uploadImageDirectory, { recursive: true });
 // Configure multer for file uploads
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
-        // Ensure the uploads directory exists in reality
-        cb(null, path.join(__dirname, '../../../../uploads/images'));
+        fs.mkdirSync(uploadImageDirectory, { recursive: true });
+        cb(null, uploadImageDirectory);
     },
     filename: (req, file, cb) => {
         // Generate UUID filename
@@ -262,7 +264,7 @@ router.delete('/:id', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (0, vali
         }
         await db_1.db.media.delete({ where: { id } });
         if (media.url.startsWith('/uploads/')) {
-            const filePath = path.join(__dirname, '../../../../uploads/images', media.filenameStored);
+            const filePath = path.join(uploadImageDirectory, media.filenameStored);
             fs.unlink(filePath, (err) => {
                 if (err) {
                     console.error(`Failed to delete file from disk: ${filePath}`, err);

@@ -15,11 +15,14 @@ import { z } from 'zod';
 
 const router = Router();
 
+const uploadImageDirectory = path.join(process.cwd(), 'uploads', 'images');
+fs.mkdirSync(uploadImageDirectory, { recursive: true });
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Ensure the uploads directory exists in reality
-    cb(null, path.join(__dirname, '../../../../uploads/images'));
+    fs.mkdirSync(uploadImageDirectory, { recursive: true });
+    cb(null, uploadImageDirectory);
   },
   filename: (req, file, cb) => {
     // Generate UUID filename
@@ -249,7 +252,7 @@ router.delete('/:id', requireAdmin, doubleCsrfProtection, validateParams(IdParam
     await db.media.delete({ where: { id } });
 
     if (media.url.startsWith('/uploads/')) {
-      const filePath = path.join(__dirname, '../../../../uploads/images', media.filenameStored);
+      const filePath = path.join(uploadImageDirectory, media.filenameStored);
       fs.unlink(filePath, (err) => {
         if (err) {
           console.error(`Failed to delete file from disk: ${filePath}`, err);

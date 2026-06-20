@@ -2014,6 +2014,16 @@ paths:
                         type: number
                         format: decimal
                         description: Estimated total price for the date range (TWD)
+                      pricing_flags:
+                        type: object
+                        description: Indicates whether the estimate includes special-date pricing.
+                        properties:
+                          special_weekend:
+                            type: boolean
+                            description: True when the estimate includes a configured public-holiday or long-weekend night charged at the weekend rate.
+                          holiday:
+                            type: boolean
+                            description: True when the estimate includes Chinese New Year pricing.
                     required: [available, room_slug, from, to]
                 required: [success, data]
         '400':

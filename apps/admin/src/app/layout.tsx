@@ -16,7 +16,7 @@ export default function RootLayout({
   return (
     <html lang="zh-TW">
       <head>
-        <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.8688bnb.com; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://api.8688bnb.com;" />
+        <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://api.8688bnb.com https://cloudflareinsights.com; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://8688bnb.com https://api.8688bnb.com;" />
       </head>
       <body>
         <AuthProvider>

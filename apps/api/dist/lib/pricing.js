@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.eachStayDate = eachStayDate;
+exports.calculateStayPricingDetails = calculateStayPricingDetails;
 exports.calculateStayPrice = calculateStayPrice;
 const db_1 = require("@8688bnb/db");
 function dateOnly(date) {
@@ -42,10 +43,11 @@ function eachStayDate(checkIn, checkOut) {
     }
     return dates;
 }
-async function calculateStayPrice(room, checkIn, checkOut) {
+async function calculateStayPricingDetails(room, checkIn, checkOut) {
     const stayDates = eachStayDate(checkIn, checkOut);
-    if (stayDates.length === 0)
-        return 0;
+    if (stayDates.length === 0) {
+        return { totalPrice: 0, hasSpecialWeekendRate: false, hasHolidayRate: false };
+    }
     let periods = [];
     try {
         periods = await db_1.db.holidayPeriod.findMany({
@@ -64,11 +66,21 @@ async function calculateStayPrice(room, checkIn, checkOut) {
             throw error;
         }
     }
-    return stayDates.reduce((total, date) => {
+    return stayDates.reduce((details, date) => {
+        const matchingPeriod = periods.find((period) => date >= period.startDate && date <= period.endDate);
         const specialRate = rateForSpecialDate(room, date, periods);
-        if (specialRate !== null)
-            return total + specialRate;
-        return total + (date.getDay() === 6 ? room.priceWeekend : room.priceWeekday);
-    }, 0);
+        if (matchingPeriod && periodType(matchingPeriod) === 'holiday') {
+            details.hasHolidayRate = true;
+        }
+        else if (matchingPeriod && !isFinalDateInMultiDayWeekendPeriod(date, matchingPeriod)) {
+            details.hasSpecialWeekendRate = true;
+        }
+        details.totalPrice += specialRate ?? (date.getDay() === 6 ? room.priceWeekend : room.priceWeekday);
+        return details;
+    }, { totalPrice: 0, hasSpecialWeekendRate: false, hasHolidayRate: false });
+}
+async function calculateStayPrice(room, checkIn, checkOut) {
+    const details = await calculateStayPricingDetails(room, checkIn, checkOut);
+    return details.totalPrice;
 }
 //# sourceMappingURL=pricing.js.map

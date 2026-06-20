@@ -78,6 +78,15 @@ function unitLabel(count: number, singular: string, plural: string) {
   return count === 1 ? singular : plural;
 }
 
+function pricingNote(availability: AvailabilityResult | undefined, t: ReturnType<typeof useLang>['t']) {
+  const specialWeekend = availability?.pricing_flags?.special_weekend;
+  const holiday = availability?.pricing_flags?.holiday;
+  if (specialWeekend && holiday) return t(bookingPage.summary.mixedSpecialPriceNote);
+  if (holiday) return t(bookingPage.summary.holidayPriceNote);
+  if (specialWeekend) return t(bookingPage.summary.specialWeekendPriceNote);
+  return null;
+}
+
 function lineMessage(room: WebsiteRoom | undefined, form: FormState, totalPrice?: number | null, bookingId?: number) {
   return [
     '你好，我想預約訂房：',
@@ -151,6 +160,8 @@ function BookingForm() {
     [room, form.checkIn, form.checkOut]
   );
   const estimatedPrice = apiEstimatedPrice ?? fallbackPrice;
+  const selectedAvailability = room ? roomAvailability[room.slug] : undefined;
+  const selectedPricingNote = pricingNote(selectedAvailability, t);
   const currentLineMessage = lineMessage(room, form, success?.total_price ?? estimatedPrice, success?.id);
 
   useEffect(() => {
@@ -365,7 +376,7 @@ function BookingForm() {
         <div className={styles.summaryRow}><span>{t(bookingPage.summary.nights)}</span><span>{nightCount > 0 ? `${nightCount} ${unitLabel(nightCount, t(bookingPage.summary.nightUnit), t(bookingPage.summary.nightUnitPlural))}` : t(bookingPage.summary.notSelected)}</span></div>
         <div className={styles.summaryRow}><span>{t(bookingPage.summary.room)}</span><span>{roomDisplayName(room, lang) || t(bookingPage.summary.notSelected)}</span></div>
         <div className={styles.summaryRow}><span>{t(bookingPage.summary.guests)}</span><span>{`${form.guestCount} ${unitLabel(form.guestCount, t(bookingPage.summary.guestUnit), t(bookingPage.summary.guestUnitPlural))}`}</span></div>
-        <div className={styles.totalPrice}>{t(bookingPage.summary.price)}：NT$ {(success?.total_price ?? estimatedPrice).toLocaleString()}<p>{t(bookingPage.summary.priceNote)}</p></div>
+        <div className={styles.totalPrice}>{t(bookingPage.summary.price)}：NT$ {(success?.total_price ?? estimatedPrice).toLocaleString()}<p>{selectedPricingNote || t(bookingPage.summary.priceNote)}</p></div>
       </div>
 
       {status && <div className={success || status === t(bookingPage.messages.lineCopied) ? styles.success : styles.error}>{status}</div>}

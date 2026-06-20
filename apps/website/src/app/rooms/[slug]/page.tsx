@@ -102,15 +102,15 @@ export default function RoomDetail({ params }: { params: Promise<{ slug: string 
                 <h3 className={styles.priceTitle}>{t({ zh: '房價資訊', en: 'Pricing' })}</h3>
                 <div className={styles.priceList}>
                   <div className={styles.priceRow}>
-                    <span>{t(roomsPage.priceLabels.weekday)} (日-四)</span>
+                    <span>{t(roomsPage.priceLabels.weekday)}<small>{t(roomsPage.priceNotes.weekday)}</small></span>
                     <strong>NT$ {room.price_weekday.toLocaleString()}</strong>
                   </div>
                   <div className={styles.priceRow}>
-                    <span>{t(roomsPage.priceLabels.weekend)} (五-六)</span>
+                    <span>{t(roomsPage.priceLabels.weekend)}<small>{t(roomsPage.priceNotes.weekend)}</small></span>
                     <strong>NT$ {room.price_weekend.toLocaleString()}</strong>
                   </div>
                   <div className={styles.priceRow}>
-                    <span>{t(roomsPage.priceLabels.holiday)} (連假/過年)</span>
+                    <span>{t(roomsPage.priceLabels.holiday)}<small>{t(roomsPage.priceNotes.holiday)}</small></span>
                     <strong>NT$ {room.price_holiday.toLocaleString()}</strong>
                   </div>
                 </div>
