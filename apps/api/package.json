@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint .",
-    "line:rich-menu:sync": "tsx src/scripts/sync-line-rich-menu.ts",
+    "line:rich-menu:sync": "node --enable-source-maps dist/scripts/sync-line-rich-menu.js",
     "test": "vitest run"
   },
   "dependencies": {

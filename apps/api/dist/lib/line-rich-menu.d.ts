@@ -75,4 +75,5 @@ export declare function linkLineAdminRichMenuToUser(userId: string, client?: Lin
 export declare function unlinkLineAdminRichMenuFromUser(userId: string, client?: LineRichMenuClient): Promise<boolean>;
 export declare function uniqueValidLineUserIds(values: string[]): string[];
 export declare function createLineRichMenuHttpClient(accessToken?: string | undefined): LineRichMenuClient;
+export declare function validateRichMenuImage(image: Buffer): void;
 //# sourceMappingURL=line-rich-menu.d.ts.map
