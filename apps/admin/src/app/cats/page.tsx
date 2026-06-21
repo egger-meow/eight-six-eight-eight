@@ -15,6 +15,7 @@ const cats = [
 
 type CatKey = typeof cats[number]['key'];
 type CatDetails = Record<CatKey, { zh: string; en?: string; tags: Array<{ zh: string; en?: string }> }>;
+type CatTagDrafts = Record<CatKey, string>;
 
 const defaultTags: Record<CatKey, string[]> = {
   tokyo: ['黏人姊妹', '窗邊巡守', '慢熟溫柔'],
@@ -25,9 +26,23 @@ const defaultTags: Record<CatKey, string[]> = {
 };
 
 const emptyDetails = Object.fromEntries(cats.map((cat) => [cat.key, { zh: '', tags: defaultTags[cat.key].map((tag) => ({ zh: tag })) }])) as CatDetails;
+const emptyTagDrafts = Object.fromEntries(cats.map((cat) => [cat.key, defaultTags[cat.key].join('，')])) as CatTagDrafts;
+
+function tagsToInputValue(tags: Array<{ zh?: string }>) {
+  return tags.map((tag) => tag.zh || '').filter(Boolean).join('，');
+}
+
+function parseTagInput(value: string) {
+  return value
+    .split(/[,，\n]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .map((tag) => ({ zh: tag }));
+}
 
 export default function AdminCatsPage() {
   const [catDetails, setCatDetails] = useState<CatDetails>(emptyDetails);
+  const [tagDrafts, setTagDrafts] = useState<CatTagDrafts>(emptyTagDrafts);
   const [pageMeta, setPageMeta] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,17 +54,26 @@ export default function AdminCatsPage() {
         const res = await apiFetch('/pages/cats', { skipCache: true });
         const meta = res?.data?.meta || {};
         const savedCats = meta.cats || {};
+        const nextDetails = Object.fromEntries(cats.map((cat) => {
+          const tags = Array.isArray(savedCats[cat.key]?.tags) && savedCats[cat.key].tags.length > 0
+            ? savedCats[cat.key].tags.map((tag: any) => ({ zh: tag.zh || '', en: tag.en || '' })).filter((tag: any) => tag.zh)
+            : defaultTags[cat.key].map((tag) => ({ zh: tag }));
+
+          return [
+            cat.key,
+            {
+              zh: savedCats[cat.key]?.zh || '',
+              en: savedCats[cat.key]?.en || '',
+              tags,
+            },
+          ];
+        })) as CatDetails;
         setPageMeta(meta);
-        setCatDetails(Object.fromEntries(cats.map((cat) => [
+        setCatDetails(nextDetails);
+        setTagDrafts(Object.fromEntries(cats.map((cat) => [
           cat.key,
-          {
-            zh: savedCats[cat.key]?.zh || '',
-            en: savedCats[cat.key]?.en || '',
-            tags: Array.isArray(savedCats[cat.key]?.tags) && savedCats[cat.key].tags.length > 0
-              ? savedCats[cat.key].tags.map((tag: any) => ({ zh: tag.zh || '', en: tag.en || '' })).filter((tag: any) => tag.zh)
-              : defaultTags[cat.key].map((tag) => ({ zh: tag })),
-          },
-        ])) as CatDetails);
+          tagsToInputValue(nextDetails[cat.key].tags),
+        ])) as CatTagDrafts);
       } catch (err: any) {
         setMessage(err.message || '讀取貓咪介紹失敗');
       } finally {
@@ -67,10 +91,9 @@ export default function AdminCatsPage() {
   }
 
   function updateTags(key: CatKey, value: string) {
-    const tags = value.split(/[,，\n]/).map((tag) => tag.trim()).filter(Boolean).map((tag) => ({ zh: tag }));
-    setCatDetails((current) => ({
+    setTagDrafts((current) => ({
       ...current,
-      [key]: { ...current[key], tags },
+      [key]: value,
     }));
   }
 
@@ -79,6 +102,14 @@ export default function AdminCatsPage() {
     setSaving(true);
     setMessage('');
     try {
+      const catsMeta = Object.fromEntries(cats.map((cat) => [
+        cat.key,
+        {
+          ...catDetails[cat.key],
+          tags: parseTagInput(tagDrafts[cat.key] || ''),
+        },
+      ])) as CatDetails;
+
       await apiFetch('/pages/cats', {
         method: 'PUT',
         body: JSON.stringify({
@@ -86,11 +117,12 @@ export default function AdminCatsPage() {
           title_en: 'Resident Cats',
           meta: {
             ...pageMeta,
-            cats: catDetails,
+            cats: catsMeta,
           },
           published: true,
         }),
       });
+      setCatDetails(catsMeta);
       setMessage('貓咪介紹已儲存');
     } catch (err: any) {
       setMessage(err.message || '儲存失敗');
@@ -134,7 +166,7 @@ export default function AdminCatsPage() {
                 <span>可愛標籤</span>
                 <input
                   className="input-field"
-                  value={(catDetails[cat.key]?.tags || []).map((tag) => tag.zh).join('，')}
+                  value={tagDrafts[cat.key] || ''}
                   onChange={(event) => updateTags(cat.key, event.target.value)}
                   placeholder="例如：黏人姊妹，唯一男生，14歲"
                 />
