@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-import { CalendarOff, Plus, Trash2 } from 'lucide-react';
+import { CalendarOff, Plus, Trash2, X } from 'lucide-react';
 
 export default function BlockedDatesPage() {
   const [blockedDates, setBlockedDates] = useState<any[]>([]);
@@ -29,6 +29,15 @@ export default function BlockedDatesPage() {
   useEffect(() => {
     fetchBlockedDates();
   }, []);
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsModalOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isModalOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,8 +123,11 @@ export default function BlockedDatesPage() {
 
       {isModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="card" style={{ width: '400px', maxWidth: '90%' }}>
-            <h2 style={{ marginBottom: '1.5rem' }}>新增封鎖日期</h2>
+          <div className="card" style={{ width: '400px', maxWidth: '90%', position: 'relative' }}>
+            <button type="button" onClick={() => setIsModalOpen(false)} aria-label="關閉" style={{ position: 'absolute', top: '1rem', right: '1rem', width: '34px', height: '34px', borderRadius: '999px', border: '1px solid var(--border-color)', background: 'white', display: 'grid', placeItems: 'center', cursor: 'pointer' }}>
+              <X size={18} />
+            </button>
+            <h2 style={{ marginBottom: '1.5rem', paddingRight: '2.5rem' }}>新增封鎖日期</h2>
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label className="form-label">開始日期</label>

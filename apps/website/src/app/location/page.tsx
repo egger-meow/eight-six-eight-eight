@@ -1,12 +1,22 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLang } from '@/context/LanguageContext';
 import { locationPage } from '@/data/content';
+import { getMedia, type WebsiteMedia } from '@/lib/api';
 import styles from './page.module.css';
 
 export default function Location() {
   const { t } = useLang();
+  const [locationImage, setLocationImage] = useState<WebsiteMedia | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    getMedia('location').then(({ media }) => {
+      if (mounted) setLocationImage(media[0] || null);
+    }).catch(() => undefined);
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -58,6 +68,12 @@ export default function Location() {
                 </div>
               </div>
               
+              {locationImage && (
+                <figure className={styles.locationPhoto}>
+                  <img src={locationImage.url} alt={locationImage.alt_text || t(locationPage.h1)} />
+                </figure>
+              )}
+
               <div className={styles.instructionBox}>
                 <p>
                   86.88民宿位於風景優美的宜蘭三星鄉，鄰近安農溪畔。

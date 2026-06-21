@@ -136,20 +136,26 @@ router.get('/targets', auth_1.requireAdmin, async (req, res, next) => {
         await (0, media_bootstrap_1.bootstrapKnownMediaTargets)();
         const rooms = await db_1.db.room.findMany({ select: { slug: true, nameZh: true, nameEn: true } });
         const targets = [
-            { target: 'homepage_hero', label_zh: '首頁輪播', label_en: 'Homepage Hero Carousel' },
-            { target: 'homepage_8688', label_zh: '首頁86.88', label_en: 'Homepage 86.88 Section' },
-            { target: 'homepage_cats', label_zh: '首頁貓咪', label_en: 'Homepage Cats Section' },
-            { target: 'homepage_bnb', label_zh: '首頁民宿', label_en: 'Homepage BnB Section' },
-            { target: 'about', label_zh: '關於我們', label_en: 'About Us Page' },
-            { target: 'rooms_overview', label_zh: '房型列表', label_en: 'Rooms Overview Page' },
-            { target: 'booking_info', label_zh: '訂房資訊', label_en: 'Booking Info Page' },
-            { target: 'location', label_zh: '民宿位置', label_en: 'Location Page' },
-            { target: 'gallery', label_zh: '相簿', label_en: 'General Gallery' },
-            { target: 'brand', label_zh: '品牌標識', label_en: 'Brand Assets' },
+            { target: 'homepage_hero', label_zh: '首頁輪播', label_en: 'Homepage Hero Carousel', description_zh: '首頁最上方輪播。第一張會最先出現。' },
+            { target: 'homepage_8688', label_zh: '首頁86.88', label_en: 'Homepage 86.88 Section', description_zh: '首頁介紹86.88民宿區塊的主圖。' },
+            { target: 'homepage_cats', label_zh: '首頁貓咪', label_en: 'Homepage Cats Section', description_zh: '首頁貓咪特色區塊圖片。' },
+            { target: 'homepage_bnb', label_zh: '首頁民宿', label_en: 'Homepage BnB Section', description_zh: '首頁民宿空間特色區塊圖片。' },
+            { target: 'about', label_zh: '關於我們', label_en: 'About Us Page', description_zh: '關於我們頁面使用的主圖。' },
+            { target: 'rooms_overview', label_zh: '房型列表', label_en: 'Rooms Overview Page', description_zh: '客房列表頁上方或房型總覽使用的圖片。' },
+            { target: 'booking_info', label_zh: '訂房資訊', label_en: 'Booking Info Page', description_zh: '訂房資訊頁面右側/上方形象照。第一張會顯示為主圖。' },
+            { target: 'location', label_zh: '民宿位置', label_en: 'Location Page', description_zh: '民宿位置頁聯絡資訊旁的形象照。第一張會顯示為主圖。' },
+            { target: 'cat_tokyo', label_zh: '貓咪 Tokyo', label_en: 'Cat Tokyo', description_zh: '民宿貓貓頁 Tokyo 的照片。第一張是卡片主圖。' },
+            { target: 'cat_sakura', label_zh: '貓咪 Sakura', label_en: 'Cat Sakura', description_zh: '民宿貓貓頁 Sakura 的照片。第一張是卡片主圖。' },
+            { target: 'cat_sake', label_zh: '貓咪 Sake', label_en: 'Cat Sake', description_zh: '民宿貓貓頁 Sake 的照片。第一張是卡片主圖。' },
+            { target: 'cat_dajin', label_zh: '貓咪 大金', label_en: 'Cat Da Jin', description_zh: '民宿貓貓頁 大金 的照片。第一張是卡片主圖。' },
+            { target: 'cat_dayin', label_zh: '貓咪 大銀', label_en: 'Cat Da Yin', description_zh: '民宿貓貓頁 大銀 的照片。第一張是卡片主圖。' },
+            { target: 'gallery', label_zh: '相簿', label_en: 'General Gallery', description_zh: '一般相簿與備用圖片。' },
+            { target: 'brand', label_zh: '品牌標識', label_en: 'Brand Assets', description_zh: '品牌標誌或社群素材。' },
             ...rooms.map((r) => ({
                 target: `room_${r.slug}`,
                 label_zh: `房型相簿 — ${r.nameZh}`,
-                label_en: `Room Gallery — ${r.nameEn || r.slug}`
+                label_en: `Room Gallery — ${r.nameEn || r.slug}`,
+                description_zh: '房型詳情頁的照片。第一張會作為房型主圖。'
             }))
         ];
         const counts = await db_1.db.media.groupBy({

@@ -10,6 +10,7 @@ const routeTitles: Record<string, string> = {
   '/blocked-dates': '封鎖日期',
   '/news': '公告管理',
   '/media': '圖片管理',
+  '/cats': '貓咪介紹',
   '/settings': '系統設定',
 };
 

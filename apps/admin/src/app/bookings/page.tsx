@@ -5,7 +5,7 @@ import styles from './bookings.module.css';
 import BookingCalendar from '@/components/BookingCalendar';
 import BookingList from '@/components/BookingList';
 import { apiFetch } from '@/lib/api';
-import { Calendar, ClipboardCheck, List, Pencil, Plus, StickyNote } from 'lucide-react';
+import { Calendar, ClipboardCheck, List, Pencil, Plus, StickyNote, X } from 'lucide-react';
 
 type ViewMode = 'calendar' | 'list';
 
@@ -122,6 +122,15 @@ export default function BookingsPage() {
 
   const defaultRoomId = useMemo(() => rooms[0]?.id ? String(rooms[0].id) : '', [rooms]);
   const selectedBookingIsPast = selectedBooking ? isPastBooking(selectedBooking) : false;
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeModal();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isModalOpen]);
 
   const handleBookingClick = (id: number) => {
     setSelectedBookingId(id);
@@ -336,6 +345,9 @@ export default function BookingsPage() {
       {isModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalCard}>
+            <button type="button" className={styles.closeButton} onClick={closeModal} aria-label="關閉">
+              <X size={20} />
+            </button>
             <div className={styles.modalHeader}>
               <div>
                 <p className={styles.modalEyebrow}>{selectedBooking ? '訂單資料' : '後台新增'}</p>

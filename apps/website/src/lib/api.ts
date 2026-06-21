@@ -1,5 +1,5 @@
 import roomsJson from '@/data/rooms.json';
-import { hero, newsSection } from '@/data/content';
+import { catProfiles, hero, newsSection } from '@/data/content';
 
 export type WebsiteMedia = {
   id?: number;
@@ -32,6 +32,16 @@ export type WebsiteNews = {
   published_at: string | null;
   visible: boolean;
   pinned: boolean;
+};
+
+export type WebsitePage = {
+  id?: number;
+  slug: string;
+  title_zh: string;
+  title_en?: string | null;
+  content_html?: string | null;
+  meta?: Record<string, any> | null;
+  published?: boolean;
 };
 
 export type AvailabilityResult = {
@@ -96,6 +106,13 @@ const fallbackMedia: Record<string, WebsiteMedia[]> = {
     alt_text: item.label.zh,
     sort_order: index * 10,
   })),
+  booking_info: [{ url: '/images/index-page/dex2.jpg', alt_text: '訂房資訊', sort_order: 10 }],
+  location: [{ url: '/images/exterior/building-2.jpg', alt_text: '民宿位置', sort_order: 10 }],
+  cat_tokyo: [{ url: '/images/index-page/rgimg1.jpg', alt_text: 'Tokyo', sort_order: 10 }],
+  cat_sakura: [{ url: '/images/index-page/rgimg2.jpg', alt_text: 'Sakura', sort_order: 10 }],
+  cat_sake: [{ url: '/images/index-page/rgimg3.jpg', alt_text: 'Sake', sort_order: 10 }],
+  cat_dajin: [{ url: '/images/index-page/rgimg4.jpg', alt_text: '大金', sort_order: 10 }],
+  cat_dayin: [{ url: '/images/index-page/rgimg5.jpg', alt_text: '大銀', sort_order: 10 }],
 };
 
 export const hasWebsiteApi = Boolean(process.env.NEXT_PUBLIC_API_URL);
@@ -196,6 +213,17 @@ export async function getMedia(target: string): Promise<{ media: WebsiteMedia[];
     };
   } catch {
     return { media: fallbackMedia[target] || [], fromApi: false };
+  }
+}
+
+export async function getPage(slug: string): Promise<{ page: WebsitePage | null; fromApi: boolean }> {
+  try {
+    return { page: await request<WebsitePage>(`/pages/${encodeURIComponent(slug)}`), fromApi: true };
+  } catch {
+    if (slug === 'cats') {
+      return { page: { slug: 'cats', title_zh: '民宿貓貓', title_en: 'Resident Cats', meta: { cats: Object.fromEntries(catProfiles.map((cat) => [cat.key, cat.description])) } }, fromApi: false };
+    }
+    return { page: null, fromApi: false };
   }
 }
 

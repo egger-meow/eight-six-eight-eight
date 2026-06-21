@@ -2,6 +2,7 @@
 
 import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useLang } from '@/context/LanguageContext';
 import { bookingPage } from '@/data/content';
@@ -163,6 +164,15 @@ function BookingForm() {
   const selectedAvailability = room ? roomAvailability[room.slug] : undefined;
   const selectedPricingNote = pricingNote(selectedAvailability, t);
   const currentLineMessage = lineMessage(room, form, success?.total_price ?? estimatedPrice, success?.id);
+
+  useEffect(() => {
+    if (!modalMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setModalMode(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [modalMode]);
 
   useEffect(() => {
     let mounted = true;
@@ -389,6 +399,9 @@ function BookingForm() {
       {modalMode && (
         <div className={styles.modalOverlay} role="dialog" aria-modal="true">
           <div className={styles.modalCard}>
+            <button type="button" className={styles.closeButton} onClick={() => setModalMode(null)} aria-label={t(bookingPage.actions.cancel)}>
+              <X size={21} />
+            </button>
             <h2>{t(modalMode === 'submit' ? bookingPage.confirmation.submitTitle : bookingPage.confirmation.lineTitle)}</h2>
             <p className={styles.modalWarning}>{t(bookingPage.confirmation.testNote)}</p>
             {modalMode === 'line' ? (

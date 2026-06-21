@@ -1,12 +1,22 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLang } from '@/context/LanguageContext';
 import { bookingInfoPage } from '@/data/content';
+import { getMedia, type WebsiteMedia } from '@/lib/api';
 import styles from './page.module.css';
 
 export default function BookingInfo() {
   const { t, lang } = useLang();
+  const [heroImage, setHeroImage] = useState<WebsiteMedia | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    getMedia('booking_info').then(({ media }) => {
+      if (mounted) setHeroImage(media[0] || null);
+    }).catch(() => undefined);
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
     const reveals = document.querySelectorAll('.reveal');
@@ -40,9 +50,19 @@ export default function BookingInfo() {
 
       <section className={styles.contentSection}>
         <div className="container">
-          <div className={`reveal ${styles.notice}`}>{t(bookingInfoPage.testNotice)}</div>
+          <div className={`reveal ${styles.editorialIntro}`}>
+            <div>
+              <div className={styles.notice}>{t(bookingInfoPage.testNotice)}</div>
+            </div>
+            {heroImage && (
+              <figure className={styles.heroPhoto}>
+                <img src={heroImage.url} alt={heroImage.alt_text || t(bookingInfoPage.h1)} />
+                <figcaption>Booking Info</figcaption>
+              </figure>
+            )}
+          </div>
 
-          <div className={`reveal ${styles.contactBand}`}>
+          <div className={`reveal ${styles.contactBand}`}> 
             {bookingInfoPage.contacts.map((contact) => (
               <a key={contact.href} href={contact.href} target={contact.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className={styles.contactLink}>
                 <span>{t(contact.label)}</span>

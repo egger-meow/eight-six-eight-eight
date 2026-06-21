@@ -66,6 +66,21 @@ const seededMediaTargets = {
     location: [
         { url: '/images/exterior/building-2.jpg', altText: '民宿位置' },
     ],
+    cat_tokyo: [
+        { url: '/images/index-page/rgimg1.jpg', altText: 'Tokyo' },
+    ],
+    cat_sakura: [
+        { url: '/images/index-page/rgimg2.jpg', altText: 'Sakura' },
+    ],
+    cat_sake: [
+        { url: '/images/index-page/rgimg3.jpg', altText: 'Sake' },
+    ],
+    cat_dajin: [
+        { url: '/images/index-page/rgimg4.jpg', altText: '大金' },
+    ],
+    cat_dayin: [
+        { url: '/images/index-page/rgimg5.jpg', altText: '大銀' },
+    ],
 };
 async function ensureMedia(target, url, sortOrder, altText) {
     const existingMedia = await db.media.findFirst({ where: { target, url } });
@@ -194,7 +209,8 @@ async function main() {
     const pages = [
         { slug: 'about', titleZh: '關於86.88民宿', titleEn: 'About 86.88 B&B' },
         { slug: 'booking-info', titleZh: '訂房資訊', titleEn: 'Booking Information' },
-        { slug: 'location', titleZh: '民宿位置', titleEn: 'Getting Here' }
+        { slug: 'location', titleZh: '民宿位置', titleEn: 'Getting Here' },
+        { slug: 'cats', titleZh: '民宿貓貓', titleEn: 'Resident Cats', meta: { cats: {} } }
     ];
     for (const page of pages) {
         await db.page.upsert({
@@ -204,6 +220,7 @@ async function main() {
                 slug: page.slug,
                 titleZh: page.titleZh,
                 titleEn: page.titleEn,
+                meta: 'meta' in page ? page.meta : undefined,
             }
         });
         console.log(`✅ Page ensured: ${page.slug}`);

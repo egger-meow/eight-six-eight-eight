@@ -19,6 +19,11 @@ const bundledMedia = {
     rooms_overview: [{ url: '/images/rooms/pastoral-quad/main/main.jpg', altText: '客房介紹' }],
     booking_info: [{ url: '/images/index-page/dex2.jpg', altText: '訂房資訊' }],
     location: [{ url: '/images/exterior/building-2.jpg', altText: '民宿位置' }],
+    cat_tokyo: [{ url: '/images/index-page/rgimg1.jpg', altText: 'Tokyo' }],
+    cat_sakura: [{ url: '/images/index-page/rgimg2.jpg', altText: 'Sakura' }],
+    cat_sake: [{ url: '/images/index-page/rgimg3.jpg', altText: 'Sake' }],
+    cat_dajin: [{ url: '/images/index-page/rgimg4.jpg', altText: '大金' }],
+    cat_dayin: [{ url: '/images/index-page/rgimg5.jpg', altText: '大銀' }],
     gallery: [
         { url: '/images/exterior/building-1.jpg', altText: '民宿外觀' },
         { url: '/images/public-spaces/dining-area-1.jpg', altText: '餐廳空間' },

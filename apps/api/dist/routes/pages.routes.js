@@ -8,6 +8,28 @@ const pages_schema_1 = require("../schemas/pages.schema");
 const common_schema_1 = require("../schemas/common.schema");
 const db_1 = require("@8688bnb/db");
 const router = (0, express_1.Router)();
+const defaultPages = {
+    cats: {
+        titleZh: '民宿貓貓',
+        titleEn: 'Resident Cats',
+        meta: { cats: {} },
+    },
+};
+async function ensurePage(slug) {
+    const fallback = defaultPages[slug];
+    if (!fallback)
+        return null;
+    return db_1.db.page.upsert({
+        where: { slug },
+        update: {},
+        create: {
+            slug,
+            titleZh: fallback.titleZh,
+            titleEn: fallback.titleEn,
+            meta: fallback.meta,
+        },
+    });
+}
 function mapPageToResponse(p) {
     return {
         id: p.id,
@@ -36,7 +58,7 @@ router.get('/:slug', (0, validate_1.validateParams)(common_schema_1.SlugParamSch
     try {
         const page = await db_1.db.page.findUnique({
             where: { slug: req.params.slug }
-        });
+        }) || await ensurePage(req.params.slug);
         if (!page) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '頁面不存在' } });
         }
@@ -51,7 +73,7 @@ router.put('/:slug', auth_1.requireAdmin, csrf_1.doubleCsrfProtection, (0, valid
         const data = req.body;
         const existingPage = await db_1.db.page.findUnique({
             where: { slug: req.params.slug }
-        });
+        }) || await ensurePage(req.params.slug);
         if (!existingPage) {
             return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '頁面不存在' } });
         }

@@ -54,6 +54,7 @@
 }
 
 .modalCard {
+  position: relative;
   width: min(900px, 100%);
   max-height: 92vh;
   overflow-y: auto;
@@ -61,6 +62,26 @@
   border-radius: 10px;
   padding: 1.5rem;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.closeButton {
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--content-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: #f3f4f6;
 }
 
 .modalHeader {

@@ -16,6 +16,7 @@ export const nav = {
     { href: '/rooms',        zh: '客房介紹', en: 'Rooms'         },
     { href: '/booking-info', zh: '訂房資訊', en: 'Booking Info'  },
     { href: '/location',     zh: '民宿位置', en: 'Location'      },
+    { href: '/cats',         zh: '民宿貓貓', en: 'Cats'          },
     { href: '/booking',      zh: '預約訂房', en: 'Reservation'   },
     {
       href: 'http://line.naver.jp/ti/p/~@gps2290j',
@@ -399,6 +400,100 @@ export const bookingInfoPage = {
     en: 'Website reservation is in testing. Submitted records, shown prices, or system replies on this website are not valid reservations. Please book officially by phone, LINE, or an official booking platform.',
   },
   contactAction: { zh: '聯繫民宿主人', en: 'Contact Host' },
+} as const;
+
+/* ────────────────────────────────────────────────
+   CATS PAGE
+──────────────────────────────────────────────── */
+export const catProfiles = [
+  {
+    key: 'tokyo',
+    target: 'cat_tokyo',
+    name: { zh: 'Tokyo', en: 'Tokyo' },
+    title: { zh: '安靜觀察員', en: 'Quiet Observer' },
+    description: {
+      zh: '喜歡在窗邊看風景，熟了以後會用很溫柔的方式陪客人坐一下。',
+      en: 'Tokyo likes watching the garden from the window and quietly keeps guests company once familiar.',
+    },
+    tags: [
+      { zh: '黏人姊妹', en: 'clingy sisters' },
+      { zh: '窗邊巡守', en: 'window watch' },
+      { zh: '慢熟溫柔', en: 'soft-hearted' },
+    ],
+  },
+  {
+    key: 'sakura',
+    target: 'cat_sakura',
+    name: { zh: 'Sakura', en: 'Sakura' },
+    title: { zh: '甜甜撒嬌擔當', en: 'Sweet Companion' },
+    description: {
+      zh: '個性親人，常常出現在公共空間，用可愛的眼神提醒大家放慢腳步。',
+      en: 'Sakura is gentle and friendly, often appearing in shared spaces to remind everyone to slow down.',
+    },
+    tags: [
+      { zh: '黏人姊妹', en: 'clingy sisters' },
+      { zh: '撒嬌代表', en: 'cuddle chief' },
+      { zh: '公共空間常駐', en: 'lounge regular' },
+    ],
+  },
+  {
+    key: 'sake',
+    target: 'cat_sake',
+    name: { zh: 'Sake', en: 'Sake' },
+    title: { zh: '好奇巡邏隊長', en: 'Curious Patrol Captain' },
+    description: {
+      zh: '對每個角落都充滿好奇，偶爾會像小管家一樣檢查民宿動線。',
+      en: 'Sake is curious about every corner and sometimes inspects the B&B like a tiny host.',
+    },
+    tags: [
+      { zh: '唯一男生', en: 'only boy' },
+      { zh: '好奇寶寶', en: 'curious one' },
+      { zh: '小管家', en: 'tiny host' },
+    ],
+  },
+  {
+    key: 'dajin',
+    target: 'cat_dajin',
+    name: { zh: '大金', en: 'Da Jin' },
+    title: { zh: '穩重暖心大哥', en: 'Warm Big Brother' },
+    description: {
+      zh: '步調穩穩的，喜歡舒服的位置，是民宿裡讓人安心的存在。',
+      en: 'Da Jin moves at an easy pace, finds the coziest spots, and brings a grounded calm to the house.',
+    },
+    tags: [
+      { zh: '14歲', en: '14 years old' },
+      { zh: '穩重派', en: 'steady soul' },
+      { zh: '舒服位置達人', en: 'cozy spot pro' },
+    ],
+  },
+  {
+    key: 'dayin',
+    target: 'cat_dayin',
+    name: { zh: '大銀', en: 'Da Yin' },
+    title: { zh: '慵懶療癒小夥伴', en: 'Lazy Little Healer' },
+    description: {
+      zh: '最會享受午後時光，偶爾抬頭看你一眼，就足夠療癒一整天。',
+      en: 'Da Yin knows how to enjoy a slow afternoon; one sleepy glance can brighten the whole day.',
+    },
+    tags: [
+      { zh: '午後慵懶', en: 'slow afternoons' },
+      { zh: '療癒眼神', en: 'healing gaze' },
+      { zh: '放空專家', en: 'daydream pro' },
+    ],
+  },
+] as const;
+
+export const catsPage = {
+  metaTitle: { zh: '民宿貓貓｜86.88民宿', en: 'Cats | 86.88 B&B' },
+  label: { zh: 'CATS', en: 'CATS' },
+  h1: { zh: '民宿貓貓', en: 'Resident Cats' },
+  intro: {
+    zh: '在86.88民宿，貓咪也是生活風景的一部分。認識 Tokyo、Sakura、Sake、大金與大銀，看看牠們平常最可愛的模樣。',
+    en: 'At 86.88 B&B, cats are part of the everyday scenery. Meet Tokyo, Sakura, Sake, Da Jin, and Da Yin.',
+  },
+  detailLabel: { zh: '貓咪相簿', en: 'Cat Gallery' },
+  emptyPhoto: { zh: '尚未上傳照片', en: 'No photos yet' },
+  close: { zh: '關閉', en: 'Close' },
 } as const;
 
 /* ────────────────────────────────────────────────

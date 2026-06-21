@@ -5,9 +5,32 @@ import { validate, validateQuery, validateParams } from '../middleware/validate'
 import { PageUpdateSchema } from '../schemas/pages.schema';
 import { SlugParamSchema } from '../schemas/common.schema';
 
-import { db } from '@8688bnb/db';
+import { db, type Prisma } from '@8688bnb/db';
 
 const router = Router();
+
+const defaultPages: Record<string, { titleZh: string; titleEn: string; meta?: Prisma.InputJsonValue }> = {
+  cats: {
+    titleZh: '民宿貓貓',
+    titleEn: 'Resident Cats',
+    meta: { cats: {} },
+  },
+};
+
+async function ensurePage(slug: string) {
+  const fallback = defaultPages[slug];
+  if (!fallback) return null;
+  return db.page.upsert({
+    where: { slug },
+    update: {},
+    create: {
+      slug,
+      titleZh: fallback.titleZh,
+      titleEn: fallback.titleEn,
+      meta: fallback.meta,
+    },
+  });
+}
 
 function mapPageToResponse(p: any) {
   return {
@@ -38,7 +61,7 @@ router.get('/:slug', validateParams(SlugParamSchema), async (req, res, next) => 
   try {
     const page = await db.page.findUnique({
       where: { slug: req.params.slug }
-    });
+    }) || await ensurePage(req.params.slug);
     if (!page) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '頁面不存在' } });
     }
@@ -53,7 +76,7 @@ router.put('/:slug', requireAdmin, doubleCsrfProtection, validateParams(SlugPara
     const data = req.body;
     const existingPage = await db.page.findUnique({
       where: { slug: req.params.slug }
-    });
+    }) || await ensurePage(req.params.slug);
     if (!existingPage) {
       return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: '頁面不存在' } });
     }
