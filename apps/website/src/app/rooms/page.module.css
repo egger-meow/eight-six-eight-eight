@@ -194,3 +194,42 @@
 .roomInfo { padding: clamp(1.25rem, 3vw, 1.8rem); }
 .capacity { background: #f3e7d5; color: var(--color-gold-dark); }
 .detailLink, .bookLink { border-radius: 999px; }
+
+/* ============================================================
+   CINEMATIC ROOM CARD OVERLAYS
+   ============================================================ */
+.roomImgWrap img {
+  transition: transform 900ms cubic-bezier(.2,.8,.2,1) !important;
+}
+
+.roomCard:hover .roomImgWrap img {
+  transform: scale(1.08);
+}
+
+.imgOverlay {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.3rem;
+  background: linear-gradient(180deg, rgba(42,31,20,0.04), rgba(42,31,20,0.7));
+  transition: opacity 0.45s var(--ease-smooth);
+}
+
+.imgOverlay strong {
+  color: white;
+  font-family: var(--font-zh);
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+}
+
+.imgOverlay span {
+  transform: translateY(10px);
+  transition: transform 0.45s var(--ease-smooth);
+}
+
+.roomCard:hover .imgOverlay span {
+  transform: translateY(0);
+}

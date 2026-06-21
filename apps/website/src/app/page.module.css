@@ -808,3 +808,58 @@
 .newsCard {
   animation: none;
 }
+
+/* ============================================================
+   CINEMATIC MOTION AND ROOM OVERLAYS
+   ============================================================ */
+.slide {
+  transform: scale(1.02);
+  transition: opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1), transform 12s ease-in-out;
+  will-change: opacity, transform;
+}
+
+.slideCurrent {
+  transform: scale(1.085);
+}
+
+.stayCell::after {
+  background:
+    linear-gradient(180deg, rgba(21, 12, 5, 0.02), rgba(21, 12, 5, 0.18) 44%, rgba(21, 12, 5, 0.72)),
+    rgba(15, 9, 4, 0.06);
+  opacity: 0.78;
+}
+
+.stayCell:hover::after {
+  opacity: 1;
+}
+
+.stayCellLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1.25rem 1.35rem;
+  background: transparent;
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.44);
+}
+
+.stayCellLabel span {
+  font-size: clamp(1rem, 2vw, 1.35rem);
+}
+
+.stayCellLabel em {
+  width: max-content;
+  max-width: 100%;
+  font-family: var(--font-serif);
+  font-size: 0.72rem;
+  font-style: normal;
+  letter-spacing: 0.2em;
+  color: rgba(255, 245, 226, 0.86);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.38s var(--ease-smooth), transform 0.38s var(--ease-smooth);
+}
+
+.stayCell:hover .stayCellLabel em {
+  opacity: 1;
+  transform: translateY(0);
+}

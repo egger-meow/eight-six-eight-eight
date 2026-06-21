@@ -69,6 +69,7 @@ export default function Rooms() {
                       style={{ objectFit: 'cover' }}
                     />
                     <div className={styles.imgOverlay}>
+                      <strong>{room.name_zh}</strong>
                       <span>{t(roomsPage.detailBtn)}</span>
                     </div>
                   </div>

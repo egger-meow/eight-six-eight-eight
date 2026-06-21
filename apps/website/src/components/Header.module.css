@@ -16,15 +16,18 @@
   transition:
     background 0.45s cubic-bezier(0.4,0,0.2,1),
     box-shadow  0.45s cubic-bezier(0.4,0,0.2,1),
+    border-color 0.45s cubic-bezier(0.4,0,0.2,1),
     height      0.3s  cubic-bezier(0.4,0,0.2,1);
+  border-bottom: 1px solid transparent;
 }
 
 .header.scrolled {
-  background: rgba(255, 252, 248, 0.97);
-  box-shadow: 0 2px 20px rgba(40, 25, 10, 0.09);
+  background: rgba(255, 253, 248, 0.86);
+  box-shadow: 0 18px 48px rgba(40, 25, 10, 0.08);
   height: 60px;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  border-color: rgba(184, 150, 95, 0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 /* ── Logo ── */
@@ -88,16 +91,22 @@
 .navItem::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: -7px;
   left: 0;
-  width: 0;
+  width: 100%;
   height: 1px;
-  background: #b89c6e;
-  transition: width 0.3s cubic-bezier(0.4,0,0.2,1);
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+  opacity: 0.72;
 }
 
 .navItem:hover         { color: #b89c6e; }
-.navItem:hover::after  { width: 100%; }
+.navItem:hover::after  {
+  transform: scaleX(1);
+  transform-origin: left;
+}
 
 .scrolled .navItem       { color: #2a1f14; }
 .scrolled .navItem:hover { color: #b89c6e; }
@@ -109,7 +118,7 @@
   gap: 3px;
   background: none;
   border: 1px solid rgba(255,255,255,0.35);
-  border-radius: 2px;
+  border-radius: 999px;
   padding: 4px 10px;
   cursor: pointer;
   font-family: var(--font-cormorant, 'Cormorant Garamond', serif);
@@ -182,9 +191,11 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(248, 245, 241, 0.98);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background:
+    radial-gradient(circle at 50% 8%, rgba(219, 194, 143, 0.22), transparent 18rem),
+    rgba(255, 253, 248, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   z-index: 550;
   flex-direction: column;
   align-items: center;

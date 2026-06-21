@@ -331,7 +331,10 @@ function StaySection() {
               sizes="(max-width:768px) 100vw, 40vw"
               style={{ objectFit: 'cover' }}
             />
-            <div className={styles.stayCellLabel}>{t(room.name)}</div>
+            <div className={styles.stayCellLabel}>
+              <span>{t(room.name)}</span>
+              <em>{t(staySection.detail)}</em>
+            </div>
           </Link>
         ))}
       </div>
