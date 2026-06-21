@@ -2,7 +2,6 @@
 
 import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { X } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { useLang } from '@/context/LanguageContext';
 import { bookingPage } from '@/data/content';
@@ -400,7 +399,7 @@ function BookingForm() {
         <div className={styles.modalOverlay} role="dialog" aria-modal="true">
           <div className={styles.modalCard}>
             <button type="button" className={styles.closeButton} onClick={() => setModalMode(null)} aria-label={t(bookingPage.actions.cancel)}>
-              <X size={21} />
+              <span aria-hidden="true">×</span>
             </button>
             <h2>{t(modalMode === 'submit' ? bookingPage.confirmation.submitTitle : bookingPage.confirmation.lineTitle)}</h2>
             <p className={styles.modalWarning}>{t(bookingPage.confirmation.testNote)}</p>

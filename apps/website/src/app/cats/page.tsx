@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
 import { useLang } from '@/context/LanguageContext';
 import { catProfiles, catsPage } from '@/data/content';
 import { getMedia, getPage, type WebsiteMedia } from '@/lib/api';
@@ -107,7 +106,7 @@ export default function CatsPage() {
         <div className={styles.detailOverlay} role="dialog" aria-modal="true" aria-label={t(selectedProfile.name)}>
           <div className={styles.detailBox}>
             <button type="button" className={styles.closeBtn} onClick={() => setSelectedCat(null)} aria-label={t(catsPage.close)}>
-              <X size={22} />
+              <span aria-hidden="true">×</span>
             </button>
             <div className={styles.detailHeader}>
               <span>{t(catsPage.detailLabel)}</span>
