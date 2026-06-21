@@ -573,3 +573,238 @@
   filter: grayscale(25%) contrast(1.02);
   line-height: 0;
 }
+
+
+/* ============================================================
+   VISUAL REFINEMENT PASS
+   ============================================================ */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 74%, rgba(219, 194, 143, 0.2), transparent 20rem),
+    linear-gradient(90deg, rgba(20, 12, 6, 0.55), transparent 56%);
+}
+
+.heroOverlay {
+  background:
+    linear-gradient(to bottom, rgba(15, 9, 4, 0.28) 0%, rgba(15, 9, 4, 0.1) 42%, rgba(15, 9, 4, 0.66) 100%),
+    linear-gradient(120deg, rgba(41, 23, 10, 0.36), transparent 62%);
+}
+
+.heroText {
+  max-width: 820px;
+}
+
+.heroH1 {
+  text-shadow: 0 12px 44px rgba(0, 0, 0, 0.38);
+}
+
+.heroLine {
+  letter-spacing: 0.055em;
+}
+
+.heroSub {
+  width: min(100%, 620px);
+  padding-left: 0.15rem;
+  text-shadow: 0 8px 28px rgba(0, 0, 0, 0.42);
+}
+
+.newsSection {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, var(--color-surface), #f7efe3 78%, var(--color-bg));
+}
+
+.newsSection::before {
+  content: "";
+  position: absolute;
+  top: 5rem;
+  left: max(1rem, calc((100vw - 1240px) / 2));
+  width: min(32vw, 360px);
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-gold), transparent);
+  opacity: 0.42;
+}
+
+.newsGrid {
+  gap: clamp(0.75rem, 1.8vw, 1.35rem);
+}
+
+.newsCard {
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fffaf1;
+  box-shadow: 0 16px 38px rgba(68, 45, 23, 0.1);
+  transition: transform 0.35s var(--ease-smooth), box-shadow 0.35s var(--ease-smooth);
+}
+
+.newsCard:nth-child(2n) {
+  transform: translateY(1.3rem);
+}
+
+.newsCard:hover {
+  transform: translateY(-0.35rem);
+  box-shadow: 0 24px 52px rgba(68, 45, 23, 0.16);
+}
+
+.newsCard:nth-child(2n):hover {
+  transform: translateY(0.9rem);
+}
+
+.newsImgWrap {
+  aspect-ratio: 5 / 4;
+}
+
+.newsCardOverlay {
+  background: linear-gradient(180deg, transparent, rgba(31, 18, 8, 0.66));
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 1rem;
+  opacity: 1;
+}
+
+.newsCardInfo {
+  padding: 0.85rem 0.95rem 1rem;
+}
+
+.aboutSection {
+  min-height: clamp(620px, 72vw, 780px);
+}
+
+.aboutOverlay {
+  background:
+    linear-gradient(105deg, rgba(24, 14, 7, 0.78) 0%, rgba(24, 14, 7, 0.42) 52%, rgba(24, 14, 7, 0.06) 100%),
+    radial-gradient(circle at 76% 24%, rgba(219, 194, 143, 0.2), transparent 18rem);
+}
+
+.aboutBox {
+  max-width: 590px;
+  padding: clamp(1.6rem, 4vw, 2.8rem);
+  border: 1px solid rgba(219, 194, 143, 0.24);
+  border-radius: 8px;
+  background: rgba(38, 24, 13, 0.32);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(8px);
+}
+
+.parallaxDiv {
+  min-height: clamp(300px, 40vw, 460px);
+  border-block: 1px solid rgba(132, 99, 58, 0.18);
+}
+
+.parallaxOverlay {
+  background:
+    radial-gradient(circle at center, rgba(255, 247, 232, 0.08), transparent 24rem),
+    rgba(26, 15, 7, 0.32);
+}
+
+.staySection {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(219, 194, 143, 0.22), transparent 20rem),
+    var(--color-bg);
+}
+
+.stayGrid {
+  width: min(100% - 2rem, 1320px);
+  margin: 0 auto;
+  grid-template-rows: clamp(300px, 36vw, 430px) clamp(260px, 30vw, 360px);
+  gap: clamp(0.7rem, 1.4vw, 1.1rem);
+}
+
+.stayCell {
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(47, 31, 17, 0.14);
+}
+
+.stayCell::after {
+  background:
+    linear-gradient(180deg, rgba(21, 12, 5, 0.04), rgba(21, 12, 5, 0.26)),
+    rgba(15,9,4,0.06);
+}
+
+.stayCellLabel {
+  transform: translateY(0);
+  padding: 1.1rem 1.25rem;
+  background: linear-gradient(to top, rgba(20, 11, 4, 0.78), rgba(20, 11, 4, 0.05));
+  font-size: 0.86rem;
+}
+
+.featuresSection {
+  background:
+    linear-gradient(180deg, var(--color-cream), #f8f1e7);
+}
+
+.featuresGrid {
+  gap: clamp(0.8rem, 1.6vw, 1.1rem);
+}
+
+.featureCard {
+  border: 1px solid rgba(184, 150, 95, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 18px 46px rgba(64, 42, 21, 0.08);
+}
+
+.featureCard:hover {
+  transform: translateY(-5px);
+}
+
+.mapSection {
+  background: linear-gradient(180deg, var(--color-surface), #f4eadc);
+}
+
+.mapInfoBox {
+  padding: clamp(1.4rem, 4vw, 2.4rem);
+  border: 1px solid rgba(184, 150, 95, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.72);
+  box-shadow: 0 18px 48px rgba(64, 42, 21, 0.08);
+}
+
+.mapEmbed {
+  border-top: 1px solid rgba(184, 150, 95, 0.24);
+  filter: grayscale(18%) contrast(1.03) sepia(8%);
+}
+
+@media (max-width: 768px) {
+  .heroText {
+    padding-bottom: 6.5rem;
+  }
+
+  .heroCtas {
+    gap: 0.75rem;
+  }
+
+  .newsCard:nth-child(2n),
+  .newsCard:nth-child(2n):hover {
+    transform: none;
+  }
+
+  .stayGrid {
+    width: min(100% - 1.25rem, 680px);
+  }
+}
+
+@media (max-width: 500px) {
+  .hero {
+    min-height: 640px;
+  }
+
+  .heroSub {
+    letter-spacing: 0.12em;
+  }
+
+  .newsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.newsCard {
+  animation: none;
+}

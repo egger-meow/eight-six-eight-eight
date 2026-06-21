@@ -412,3 +412,21 @@
   min-width: 150px;
   justify-content: center;
 }
+
+
+/* ============================================================
+   VISUAL REFINEMENT PASS
+   ============================================================ */
+.subPage { background: linear-gradient(180deg, #fbf7ef, var(--color-bg)); }
+.pageHeader { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 0%, rgba(219,194,143,0.22), transparent 24rem), linear-gradient(180deg, var(--color-surface), var(--color-cream)); }
+.pageHeader::after { content: ""; position: absolute; left: 50%; bottom: 0; width: min(680px, 80vw); height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, rgba(184,150,95,0.58), transparent); }
+.section { background: transparent; }
+.bookingForm { border-color: rgba(184,150,95,0.24); background: rgba(255,253,248,0.88); box-shadow: 0 22px 58px rgba(64,42,21,0.11); }
+.notice { border-color: rgba(184,150,95,0.52); background: linear-gradient(180deg, #fff9ea, #fff4d8); }
+.formControl { border-color: rgba(132,99,58,0.28); border-radius: 8px; background: #fffdf8; }
+.roomCard { border-color: rgba(132,99,58,0.24); background: #fffdf8; }
+.roomCard.selected { background: #f4eadc; }
+.summary { background: radial-gradient(circle at 100% 0%, rgba(219,194,143,0.18), transparent 16rem), #34291f; box-shadow: 0 20px 48px rgba(42,29,18,0.18); }
+.submitBtn, .lineBtn { border-radius: 999px; }
+.modalOverlay { backdrop-filter: blur(5px); }
+.modalCard { background: radial-gradient(circle at top left, rgba(219,194,143,0.14), transparent 18rem), var(--color-surface); }

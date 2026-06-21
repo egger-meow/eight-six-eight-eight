@@ -94,7 +94,6 @@ export default function CatsPage() {
                     {primary ? <img src={primary.url} alt={primary.alt_text || t(cat.name)} /> : <span>{t(catsPage.emptyPhoto)}</span>}
                   </span>
                   <strong>{t(cat.name)}</strong>
-                  <small>{t(cat.title)}</small>
                 </button>
               );
             })}

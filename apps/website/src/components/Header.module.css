@@ -253,3 +253,67 @@
   .hamburger      { display: flex; }
   .drawer         { display: flex; }
 }
+
+
+/* ============================================================
+   VISUAL REFINEMENT PASS
+   ============================================================ */
+.header {
+  height: 78px;
+  background: linear-gradient(180deg, rgba(18, 11, 6, 0.28), transparent);
+}
+
+.header.scrolled {
+  height: 64px;
+  background: rgba(255, 251, 244, 0.9);
+  border-bottom: 1px solid rgba(184, 150, 95, 0.18);
+  box-shadow: 0 12px 34px rgba(43, 28, 14, 0.08);
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+}
+
+.logoNum {
+  text-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+
+.scrolled .logoNum {
+  text-shadow: none;
+}
+
+.navList {
+  gap: clamp(0.85rem, 1.8vw, 1.85rem);
+}
+
+.navItem {
+  padding: 0.45rem 0;
+  letter-spacing: 0.13em;
+}
+
+.navItem::after {
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+}
+
+.langToggle {
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+}
+
+.langToggleScrolled {
+  background: rgba(184, 150, 95, 0.08);
+}
+
+.drawer {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(219, 194, 143, 0.24), transparent 18rem),
+    rgba(248, 241, 232, 0.98);
+}
+
+.drawerItem {
+  border-bottom-color: rgba(184, 150, 95, 0.18);
+}
+
+.drawerReserve {
+  border-radius: 999px;
+}

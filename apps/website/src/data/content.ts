@@ -18,12 +18,6 @@ export const nav = {
     { href: '/location',     zh: '民宿位置', en: 'Location'      },
     { href: '/cats',         zh: '民宿貓貓', en: 'Cats'          },
     { href: '/booking',      zh: '預約訂房', en: 'Reservation'   },
-    {
-      href: 'http://line.naver.jp/ti/p/~@gps2290j',
-      zh: 'LINE 訂房',
-      en: 'LINE Reserve',
-      external: true,
-    },
   ],
   reserveBtn: { zh: '立即預訂', en: 'Reserve Now' },
 } as const;
@@ -410,7 +404,6 @@ export const catProfiles = [
     key: 'tokyo',
     target: 'cat_tokyo',
     name: { zh: 'Tokyo', en: 'Tokyo' },
-    title: { zh: '安靜觀察員', en: 'Quiet Observer' },
     description: {
       zh: '喜歡在窗邊看風景，熟了以後會用很溫柔的方式陪客人坐一下。',
       en: 'Tokyo likes watching the garden from the window and quietly keeps guests company once familiar.',
@@ -425,7 +418,6 @@ export const catProfiles = [
     key: 'sakura',
     target: 'cat_sakura',
     name: { zh: 'Sakura', en: 'Sakura' },
-    title: { zh: '甜甜撒嬌擔當', en: 'Sweet Companion' },
     description: {
       zh: '個性親人，常常出現在公共空間，用可愛的眼神提醒大家放慢腳步。',
       en: 'Sakura is gentle and friendly, often appearing in shared spaces to remind everyone to slow down.',
@@ -440,7 +432,6 @@ export const catProfiles = [
     key: 'sake',
     target: 'cat_sake',
     name: { zh: 'Sake', en: 'Sake' },
-    title: { zh: '好奇巡邏隊長', en: 'Curious Patrol Captain' },
     description: {
       zh: '對每個角落都充滿好奇，偶爾會像小管家一樣檢查民宿動線。',
       en: 'Sake is curious about every corner and sometimes inspects the B&B like a tiny host.',
@@ -455,7 +446,6 @@ export const catProfiles = [
     key: 'dajin',
     target: 'cat_dajin',
     name: { zh: '大金', en: 'Da Jin' },
-    title: { zh: '穩重暖心大哥', en: 'Warm Big Brother' },
     description: {
       zh: '步調穩穩的，喜歡舒服的位置，是民宿裡讓人安心的存在。',
       en: 'Da Jin moves at an easy pace, finds the coziest spots, and brings a grounded calm to the house.',
@@ -470,7 +460,6 @@ export const catProfiles = [
     key: 'dayin',
     target: 'cat_dayin',
     name: { zh: '大銀', en: 'Da Yin' },
-    title: { zh: '慵懶療癒小夥伴', en: 'Lazy Little Healer' },
     description: {
       zh: '最會享受午後時光，偶爾抬頭看你一眼，就足夠療癒一整天。',
       en: 'Da Yin knows how to enjoy a slow afternoon; one sleepy glance can brighten the whole day.',

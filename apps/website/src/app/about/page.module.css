@@ -97,3 +97,18 @@
   inset: 0;
   background: rgba(15,9,4,0.3);
 }
+
+
+/* ============================================================
+   VISUAL REFINEMENT PASS
+   ============================================================ */
+.subPage { background: linear-gradient(180deg, #fbf7ef, var(--color-bg)); }
+.pageHeader { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 0%, rgba(219,194,143,0.22), transparent 24rem), linear-gradient(180deg, var(--color-surface), var(--color-cream)); }
+.pageHeader::after { content: ""; position: absolute; left: 50%; bottom: 0; width: min(680px, 80vw); height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, rgba(184,150,95,0.58), transparent); }
+.aboutGrid { align-items: center; }
+.description { max-width: 62ch; }
+.featureItem { border: 1px solid rgba(184,150,95,0.16); background: rgba(255,253,248,0.82); }
+.imageFrame { border: 12px solid #fffdf8; border-radius: 8px; box-shadow: 0 24px 60px rgba(54,35,18,0.16); }
+.aboutImgCol::before { content: ""; position: absolute; inset: 1.5rem -1.1rem -1.1rem 1.5rem; border: 1px solid rgba(184,150,95,0.34); border-radius: 8px; }
+.parallaxOverlay { background: radial-gradient(circle at center, rgba(255,247,232,0.08), transparent 24rem), rgba(26,15,7,0.34); }
+@media (max-width: 700px) { .featuresGrid { grid-template-columns: 1fr; } .aboutImgCol::before { display: none; } }
