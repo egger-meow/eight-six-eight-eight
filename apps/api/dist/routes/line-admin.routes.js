@@ -483,12 +483,12 @@ async function roomsFlexMessage() {
 async function announcementFlexMessage() {
     const announcement = await getAnnouncement();
     if (!announcement)
-        return infoFlexMessage('網站公告', [['狀態', '目前沒有網站公告。']]);
+        return infoFlexMessage('網站公告', [['狀態', '目前沒有網站公告。']], line_ui_1.announcementQuickReply);
     return infoFlexMessage('網站公告', [
         ['標題', announcement.title],
         ['內容', announcement.content],
         ['顯示', announcement.visible ? '是' : '否'],
-    ]);
+    ], line_ui_1.announcementQuickReply);
 }
 function infoFlexMessage(title, rows, quickReplyValue) {
     return {
@@ -574,7 +574,9 @@ async function replyBookingSearchScope(replyToken, scope) {
         ? { checkIn: today, status: { notIn: ['cancelled', 'no_show'] } }
         : scope === 'next_7_days'
             ? { checkIn: { gte: today, lte: sevenDaysLater }, status: { notIn: ['cancelled', 'no_show'] } }
-            : { status: 'pending' };
+            : scope === 'future'
+                ? { checkIn: { gte: today }, status: { notIn: ['cancelled', 'no_show'] } }
+                : { status: 'pending' };
     const bookings = await db_1.db.booking.findMany({ where, include: { room: true, internalNotes: { orderBy: { createdAt: 'desc' }, take: 1 } }, orderBy: { checkIn: 'asc' }, take: 5 });
     if (bookings.length === 0) {
         await replyText(replyToken, '目前沒有符合的訂房。', line_ui_1.bookingMenuQuickReply);
@@ -913,6 +915,18 @@ async function updateAnnouncementFromLine(replyToken, title, content, actorLineA
 }
 async function handleConversationText(replyToken, actorLineAdminId, text) {
     const state = await getLineConversationState(actorLineAdminId);
+    if (state?.flow === 'announcement_update') {
+        const parts = text.split('|');
+        const title = parts.shift()?.trim();
+        const content = parts.join('|').trim();
+        if (!title || !content) {
+            await replyText(replyToken, '請輸入：標題|內容。例：端午連假公告|端午連假期間歡迎來電確認房況');
+            return true;
+        }
+        await updateAnnouncementFromLine(replyToken, title, content, actorLineAdminId);
+        await clearLineConversationState(actorLineAdminId);
+        return true;
+    }
     if (!state || state.flow !== 'booking_create' || state.step !== 'guest_details')
         return false;
     const details = parseBookingGuestDetails(text);
@@ -1142,6 +1156,11 @@ async function handlePostback(event, actorLineAdminId) {
     }
     if (action === 'announcement') {
         await replyMessages(event.replyToken, [await announcementFlexMessage()]);
+        return;
+    }
+    if (action === 'announcement_update') {
+        await setLineConversationState(actorLineAdminId, { flow: 'announcement_update', step: 'content' });
+        await replyText(event.replyToken, '請輸入新的網站公告：標題|內容。例：端午連假公告|端午連假期間歡迎來電確認房況');
         return;
     }
     if (action === 'booking_more') {

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.roomQuickReply = exports.blockedDateQuickReply = exports.bookingMenuQuickReply = exports.linePostbacks = void 0;
+exports.roomQuickReply = exports.blockedDateQuickReply = exports.announcementQuickReply = exports.bookingMenuQuickReply = exports.linePostbacks = void 0;
 exports.parseLinePostback = parseLinePostback;
 exports.normalizePhoneForTelUri = normalizePhoneForTelUri;
 exports.bookingSummaryText = bookingSummaryText;
@@ -24,6 +24,7 @@ exports.linePostbacks = {
     blockedMenu: 'v=1&a=blocked_menu',
     roomMenu: 'v=1&a=room_menu',
     announcement: 'v=1&a=announcement',
+    announcementUpdate: 'v=1&a=announcement_update',
     bookingSearch: (scope) => `v=1&a=booking_search&scope=${encodeURIComponent(scope)}`,
     bookingAction: (action, bookingId) => `v=1&a=${encodeURIComponent(action)}&bid=${bookingId}`,
     bookingMore: (bookingId) => `v=1&a=booking_more&bid=${bookingId}`,
@@ -117,15 +118,23 @@ function quickReply(labels) {
             type: 'action',
             action: item.data
                 ? { type: 'postback', label: item.label, data: item.data }
-                : { type: 'message', label: item.label, text: item.text || item.label },
+                : item.uri
+                    ? { type: 'uri', label: item.label, uri: item.uri }
+                    : { type: 'message', label: item.label, text: item.text || item.label },
         })),
     };
 }
 exports.bookingMenuQuickReply = quickReply([
     { label: '待確認', data: exports.linePostbacks.bookingSearch('pending') },
+    { label: '未來訂房', data: exports.linePostbacks.bookingSearch('future') },
     { label: '今日入住', data: exports.linePostbacks.bookingSearch('today_checkin') },
     { label: '七日內訂房', data: exports.linePostbacks.bookingSearch('next_7_days') },
-    { label: '搜尋訂房', text: '訂單 ' },
+    { label: '開啟後臺', uri: `${config_1.config.PUBLIC_ADMIN_URL.replace(/\/$/, '')}/bookings` },
+    { label: '返回', data: exports.linePostbacks.dashboard },
+]);
+exports.announcementQuickReply = quickReply([
+    { label: '更新公告', data: exports.linePostbacks.announcementUpdate },
+    { label: '開啟後臺', uri: `${config_1.config.PUBLIC_ADMIN_URL.replace(/\/$/, '')}/news` },
     { label: '返回', data: exports.linePostbacks.dashboard },
 ]);
 exports.blockedDateQuickReply = quickReply([

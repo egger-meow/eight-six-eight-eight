@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  announcementQuickReply,
   blockedDateQuickReply,
   bookingFlexMessage,
   bookingMenuQuickReply,
@@ -88,7 +89,9 @@ describe('booking Flex message', () => {
 
 describe('contextual quick replies and date pickers', () => {
   it('builds scoped quick replies without attaching unrelated choices', () => {
-    expect(bookingMenuQuickReply.items.map((item: any) => item.action.label)).toEqual(['待確認', '今日入住', '七日內訂房', '搜尋訂房', '返回']);
+    expect(bookingMenuQuickReply.items.map((item: any) => item.action.label)).toEqual(['待確認', '未來訂房', '今日入住', '七日內訂房', '開啟後臺', '返回']);
+    expect(bookingMenuQuickReply.items.map((item: any) => item.action.type)).toContain('uri');
+    expect(announcementQuickReply.items.map((item: any) => item.action.label)).toEqual(['更新公告', '開啟後臺', '返回']);
     expect(blockedDateQuickReply.items.map((item: any) => item.action.label)).toEqual(['查看封鎖', '封鎖單一房型', '封鎖全部房型', '解除封鎖', '返回']);
     expect(roomQuickReply.items.map((item: any) => item.action.label)).toEqual(['平日房價', '週末房價', '假日房價', '房型開關', '返回']);
   });

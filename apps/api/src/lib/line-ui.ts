@@ -32,6 +32,7 @@ export const linePostbacks = {
   blockedMenu: 'v=1&a=blocked_menu',
   roomMenu: 'v=1&a=room_menu',
   announcement: 'v=1&a=announcement',
+  announcementUpdate: 'v=1&a=announcement_update',
   bookingSearch: (scope: string) => `v=1&a=booking_search&scope=${encodeURIComponent(scope)}`,
   bookingAction: (action: string, bookingId: number) => `v=1&a=${encodeURIComponent(action)}&bid=${bookingId}`,
   bookingMore: (bookingId: number) => `v=1&a=booking_more&bid=${bookingId}`,
@@ -119,22 +120,31 @@ export function bookingQuickReplyItems(booking: BookingCardInput) {
   return items;
 }
 
-export function quickReply(labels: Array<{ label: string; data?: string; text?: string }>) {
+export function quickReply(labels: Array<{ label: string; data?: string; text?: string; uri?: string }>) {
   return {
     items: labels.map((item) => ({
       type: 'action',
       action: item.data
         ? { type: 'postback', label: item.label, data: item.data }
-        : { type: 'message', label: item.label, text: item.text || item.label },
+        : item.uri
+          ? { type: 'uri', label: item.label, uri: item.uri }
+          : { type: 'message', label: item.label, text: item.text || item.label },
     })),
   };
 }
 
 export const bookingMenuQuickReply = quickReply([
   { label: '待確認', data: linePostbacks.bookingSearch('pending') },
+  { label: '未來訂房', data: linePostbacks.bookingSearch('future') },
   { label: '今日入住', data: linePostbacks.bookingSearch('today_checkin') },
   { label: '七日內訂房', data: linePostbacks.bookingSearch('next_7_days') },
-  { label: '搜尋訂房', text: '訂單 ' },
+  { label: '開啟後臺', uri: `${config.PUBLIC_ADMIN_URL.replace(/\/$/, '')}/bookings` },
+  { label: '返回', data: linePostbacks.dashboard },
+]);
+
+export const announcementQuickReply = quickReply([
+  { label: '更新公告', data: linePostbacks.announcementUpdate },
+  { label: '開啟後臺', uri: `${config.PUBLIC_ADMIN_URL.replace(/\/$/, '')}/news` },
   { label: '返回', data: linePostbacks.dashboard },
 ]);
 

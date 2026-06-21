@@ -292,8 +292,9 @@ Search results are capped into a Flex carousel rather than many separate booking
 
 Contextual Quick Replies are used only where relevant:
 
-- Booking management: `待確認`, `今日入住`, `七日內訂房`, `搜尋訂房`, `返回`.
+- Booking management: `待確認`, `未來訂房`, `今日入住`, `七日內訂房`, `開啟後臺`, `返回`.
 - Blocked dates: `查看封鎖`, `封鎖單一房型`, `封鎖全部房型`, `解除封鎖`, `返回`.
+- Announcement management: `更新公告`, `開啟後臺`, `返回`.
 - Room management: `平日房價`, `週末房價`, `假日房價`, `房型開關`, `返回`.
 
 Rich Menu date flows use LINE date-picker postbacks for booking check-in/check-out and blocked-date start/end. Booking creation continues with postback room selection, postback guest count selection, a short text prompt for guest contact details, and a final confirmation postback before mutation. Temporary multi-step state is stored in Redis with expiration. Final mutations still re-read current database state, validate authorization, use shared booking/blocked-date rules, and write audit logs.

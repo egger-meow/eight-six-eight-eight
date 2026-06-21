@@ -31,6 +31,7 @@ export declare const linePostbacks: {
     blockedMenu: string;
     roomMenu: string;
     announcement: string;
+    announcementUpdate: string;
     bookingSearch: (scope: string) => string;
     bookingAction: (action: string, bookingId: number) => string;
     bookingMore: (bookingId: number) => string;
@@ -56,6 +57,7 @@ export declare function quickReply(labels: Array<{
     label: string;
     data?: string;
     text?: string;
+    uri?: string;
 }>): {
     items: {
         type: string;
@@ -63,12 +65,20 @@ export declare function quickReply(labels: Array<{
             type: string;
             label: string;
             data: string;
+            uri?: undefined;
+            text?: undefined;
+        } | {
+            type: string;
+            label: string;
+            uri: string;
+            data?: undefined;
             text?: undefined;
         } | {
             type: string;
             label: string;
             text: string;
             data?: undefined;
+            uri?: undefined;
         };
     }[];
 };
@@ -79,12 +89,44 @@ export declare const bookingMenuQuickReply: {
             type: string;
             label: string;
             data: string;
+            uri?: undefined;
+            text?: undefined;
+        } | {
+            type: string;
+            label: string;
+            uri: string;
+            data?: undefined;
             text?: undefined;
         } | {
             type: string;
             label: string;
             text: string;
             data?: undefined;
+            uri?: undefined;
+        };
+    }[];
+};
+export declare const announcementQuickReply: {
+    items: {
+        type: string;
+        action: {
+            type: string;
+            label: string;
+            data: string;
+            uri?: undefined;
+            text?: undefined;
+        } | {
+            type: string;
+            label: string;
+            uri: string;
+            data?: undefined;
+            text?: undefined;
+        } | {
+            type: string;
+            label: string;
+            text: string;
+            data?: undefined;
+            uri?: undefined;
         };
     }[];
 };
@@ -95,12 +137,20 @@ export declare const blockedDateQuickReply: {
             type: string;
             label: string;
             data: string;
+            uri?: undefined;
+            text?: undefined;
+        } | {
+            type: string;
+            label: string;
+            uri: string;
+            data?: undefined;
             text?: undefined;
         } | {
             type: string;
             label: string;
             text: string;
             data?: undefined;
+            uri?: undefined;
         };
     }[];
 };
@@ -111,12 +161,20 @@ export declare const roomQuickReply: {
             type: string;
             label: string;
             data: string;
+            uri?: undefined;
+            text?: undefined;
+        } | {
+            type: string;
+            label: string;
+            uri: string;
+            data?: undefined;
             text?: undefined;
         } | {
             type: string;
             label: string;
             text: string;
             data?: undefined;
+            uri?: undefined;
         };
     }[];
 };
