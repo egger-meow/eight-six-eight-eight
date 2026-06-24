@@ -6,8 +6,31 @@ import styles from './media.module.css';
 import { UploadCloud, Trash2, GripHorizontal, Image as ImageIcon } from 'lucide-react';
 
 const WEBSITE_ORIGIN = (process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://8688bnb.com').replace(/\/$/, '');
-const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const acceptedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+const acceptedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'];
 const maxFileSize = 10 * 1024 * 1024;
+
+const isHeicFile = (file: File) => {
+  const lowerName = file.name.toLowerCase();
+  return file.type === 'image/heic' || file.type === 'image/heif' || lowerName.endsWith('.heic') || lowerName.endsWith('.heif');
+};
+
+const isAcceptedFile = (file: File) => {
+  const lowerName = file.name.toLowerCase();
+  return acceptedTypes.includes(file.type) || acceptedExtensions.some((ext) => lowerName.endsWith(ext));
+};
+
+const convertHeicToJpeg = async (file: File) => {
+  const { default: heic2any } = await import('heic2any');
+  const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+  const blob = Array.isArray(converted) ? converted[0] : converted;
+  const convertedName = file.name.replace(/\.(heic|heif)$/i, '.jpg');
+
+  return new File([blob], convertedName === file.name ? file.name + '.jpg' : convertedName, {
+    type: 'image/jpeg',
+    lastModified: file.lastModified,
+  });
+};
 
 export default function MediaPage() {
   const [targets, setTargets] = useState<any[]>([]);
@@ -54,8 +77,8 @@ export default function MediaPage() {
 
   const validateFiles = (files: File[]) => {
     for (const file of files) {
-      if (!acceptedTypes.includes(file.type)) {
-        alert('只能上傳 JPG、PNG 或 WebP 圖片');
+      if (!isAcceptedFile(file)) {
+        alert('只能上傳 JPG、PNG、WebP 或 iPhone HEIC 圖片');
         return false;
       }
       if (file.size > maxFileSize) {
@@ -66,14 +89,34 @@ export default function MediaPage() {
     return true;
   };
 
+  const prepareFilesForUpload = async (files: File[]) => {
+    const prepared: File[] = [];
+
+    for (const file of files) {
+      if (isHeicFile(file)) {
+        try {
+          prepared.push(await convertHeicToJpeg(file));
+        } catch (error) {
+          console.error(error);
+          throw new Error(file.name + ' 轉換失敗，請在 iPhone 選擇「最相容」照片格式後再試一次');
+        }
+      } else {
+        prepared.push(file);
+      }
+    }
+
+    return prepared;
+  };
+
   const uploadFiles = async (fileList: FileList | File[]) => {
-    const files = Array.from(fileList);
-    if (files.length === 0 || !validateFiles(files)) return;
+    const selectedFiles = Array.from(fileList);
+    if (selectedFiles.length === 0 || !validateFiles(selectedFiles)) return;
 
     const currentMaxSort = media.reduce((max, item, index) => Math.max(max, Number(item.sort_order ?? index * 10)), 0);
 
     try {
       setLoading(true);
+      const files = await prepareFilesForUpload(selectedFiles);
       for (const [index, file] of files.entries()) {
         const formData = new FormData();
         formData.append('file', file);
@@ -173,7 +216,7 @@ export default function MediaPage() {
             <UploadCloud size={18} />
             上傳圖片
           </button>
-          <input type="file" multiple ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/jpeg,image/png,image/webp" />
+          <input type="file" multiple ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" />
         </div>
 
         <div
@@ -188,7 +231,7 @@ export default function MediaPage() {
           <UploadCloud size={24} />
           <div>
             <strong>拖曳圖片到這裡，或點擊選擇多張圖片</strong>
-            <span>支援 JPG、PNG、WebP，每張 10MB 以內。新圖片會接在目前排序最後面。</span>
+            <span>支援 JPG、PNG、WebP、iPhone HEIC，每張 10MB 以內。HEIC 會先轉成 JPG 再上傳。</span>
           </div>
         </div>
 

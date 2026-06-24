@@ -191,15 +191,21 @@
   display: none;
   position: fixed;
   inset: 0;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: calc(env(safe-area-inset-top) + 4.75rem) 1rem calc(env(safe-area-inset-bottom) + 2rem);
   background:
     radial-gradient(circle at 50% 8%, rgba(219, 194, 143, 0.22), transparent 18rem),
     rgba(255, 253, 248, 0.94);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  z-index: 550;
+  z-index: 9999;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.35s cubic-bezier(0.4,0,0.2,1);
@@ -210,11 +216,38 @@
   pointer-events: all;
 }
 
+.drawerClose {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 1.1rem);
+  right: calc(env(safe-area-inset-right) + 1rem);
+  z-index: 10000;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 253, 248, 0.7);
+  border: 1px solid rgba(184, 150, 95, 0.28);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.drawerClose span {
+  position: absolute;
+  width: 22px;
+  height: 1.5px;
+  background: #2a1f14;
+  transform-origin: center;
+}
+
+.drawerClose span:first-child { transform: rotate(45deg); }
+.drawerClose span:last-child  { transform: rotate(-45deg); }
+
 .drawerList {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 100%;
+  width: min(100%, 520px);
 }
 
 .drawerItem {
@@ -319,6 +352,12 @@
   background:
     radial-gradient(circle at 50% 18%, rgba(219, 194, 143, 0.24), transparent 18rem),
     rgba(248, 241, 232, 0.98);
+}
+
+@media (max-height: 560px) {
+  .drawer {
+    justify-content: flex-start;
+  }
 }
 
 .drawerItem {
