@@ -6,7 +6,7 @@ Last updated: 2026-06-19
 
 - Public website migrated to Next.js with responsive pages for home, rooms, room detail, about, booking, booking info, and location.
 - Website uses API-backed rooms, news, and media when available, with bundled fallback data/images.
-- Website reservation test flow includes date-based room availability checks, unavailable room disabling, API-backed price estimates, confirmation modal, LINE confirmation modal, and an explicit test-only warning.
+- Website reservation request flow includes date-based room availability checks, unavailable room disabling, API-backed price estimates, confirmation modal, LINE confirmation modal, and an explicit notice that the room is reserved only after host confirmation and deposit transfer.
 - Docker Compose stack includes website, admin, API, PostgreSQL, Redis, Nginx Proxy Manager, Cloudflare Tunnel, and seed profile.
 - Express API implemented for auth, rooms, bookings, blocked dates, media, pages, news, dashboard, webhooks, and system info.
 - Prisma schema established for users, rooms, bookings, booking notes, blocked dates, special pricing periods, media, CMS pages, news, and webhook events.

@@ -272,9 +272,9 @@ export const bookingPage = {
     zh: '送出預約後由民宿主人確認房況與付款細節',
     en: 'Submit a request and the host will confirm availability and payment details.',
   },
-  testWarning: {
-    zh: '官網訂房功能測試中，請勿於本網站進行訂房操作。本網站顯示之空房、價格、送出資料或系統通知皆不視為有效訂房，也不代表民宿已保留房間。正式訂房請透過電話、LINE 或其他正式訂房平台聯繫。',
-    en: 'Website reservation is currently in testing. Do not use this website to make an actual reservation. Availability, prices, submitted records, or system notices shown here are not valid reservations and do not mean a room has been held. Please book officially by phone, LINE, or an official booking platform.',
+  reservationNotice: {
+    zh: '官網預約功能開放中！目前已可於本網站送出預約申請。請注意：送出預約資料後，僅代表申請已送出，尚未等同訂房成功或保留房間。民宿主人將再透過電話或 LINE 與您確認房況、金額與入住細節；待雙方確認並完成訂金匯款後，才視為正式訂房成功。',
+    en: 'Online reservation requests are now open. You can submit a request on this website. Please note: submitting the form means your request has been sent; it is not yet a confirmed booking or room hold. The host will confirm availability, price, and stay details by phone or LINE; the booking is official only after both sides confirm and the deposit transfer is completed.',
   },
   unavailableNotice: {
     zh: '線上空房查詢與送出暫時無法使用。您仍可填寫資料後使用 LINE 聯繫民宿主人。',
@@ -317,14 +317,14 @@ export const bookingPage = {
     submit: { zh: '送出線上預約', en: 'Submit Reservation' },
     submitting: { zh: '送出中...', en: 'Submitting...' },
     line: { zh: '使用 LINE 聯繫確認', en: 'Confirm via LINE' },
-    confirmSubmit: { zh: '確認送出測試預約', en: 'Confirm Test Submission' },
+    confirmSubmit: { zh: '確認送出預約申請', en: 'Submit Request' },
     confirmLine: { zh: '複製並開啟 LINE', en: 'Copy and Open LINE' },
     cancel: { zh: '取消', en: 'Cancel' },
   },
   confirmation: {
     submitTitle: { zh: '確認送出預約資料', en: 'Confirm Reservation Details' },
     lineTitle: { zh: '確認 LINE 訊息內容', en: 'Confirm LINE Message' },
-    testNote: { zh: '提醒：官網訂房功能仍在測試中，送出資料不視為有效訂房。', en: 'Reminder: website reservation is in testing, and submitted records are not valid reservations.' },
+    reservationNote: { zh: '提醒：送出後民宿主人將再透過電話或 LINE 確認房況、金額與入住細節；待雙方確認並完成訂金匯款後，才視為正式訂房成功。', en: 'Reminder: after submission, the host will confirm availability, price, and stay details by phone or LINE. The booking is official only after both sides confirm and the deposit transfer is completed.' },
     contact: { zh: '聯絡資料', en: 'Contact' },
     notes: { zh: '備註', en: 'Notes' },
     emptyNotes: { zh: '未填寫', en: 'None' },
@@ -351,8 +351,8 @@ export const bookingInfoPage = {
   metaTitle: { zh: '訂房資訊｜86.88民宿', en: 'Booking Info | 86.88 B&B' },
   h1: { zh: '訂房資訊', en: 'Booking Information' },
   intro: {
-    zh: '訂房成立以前，請以電話、LINE 或正式訂房平台與民宿主人確認房況、價格與付款方式。',
-    en: 'Before a reservation is confirmed, please verify availability, price, and payment details with the host by phone, LINE, or an official booking platform.',
+    zh: '官網預約功能開放中，可於本網站送出預約申請，民宿主人會再確認房況、價格與訂金匯款方式。',
+    en: 'Online reservation requests are open. You can submit a request on this website, and the host will confirm availability, price, and deposit transfer details.',
   },
   contacts: [
     { label: { zh: 'LINE', en: 'LINE' }, value: '@gps2290j', href: 'http://line.naver.jp/ti/p/~@gps2290j' },
@@ -363,8 +363,8 @@ export const bookingInfoPage = {
     {
       title: { zh: '訂房與付款確認', en: 'Reservation & Payment' },
       items: {
-        zh: ['請先提供入住日期、退房日期、房型、人數與聯絡方式。', '民宿主人確認仍有空房後，會回覆實際價格與付款方式。', '完成主人指定的確認流程後，才視為正式訂房。'],
-        en: ['Send your check-in date, check-out date, room type, guest count, and contact details first.', 'The host will reply with confirmed availability, final price, and payment method.', 'A booking is official only after the host confirms the required steps are complete.'],
+        zh: ['請先提供入住日期、退房日期、房型、人數與聯絡方式。', '民宿主人確認仍有空房後，會回覆實際價格與訂金匯款方式。', '待雙方確認並完成訂金匯款後，才視為正式訂房成功。'],
+        en: ['Send your check-in date, check-out date, room type, guest count, and contact details first.', 'The host will reply with confirmed availability, final price, and deposit transfer details.', 'A booking is official only after both sides confirm and the deposit transfer is completed.'],
       },
     },
     {
@@ -389,9 +389,9 @@ export const bookingInfoPage = {
       },
     },
   ],
-  testNotice: {
-    zh: '官網訂房功能測試中，網站送出資料、顯示價格或系統回覆皆不視為有效訂房。正式訂房請透過電話、LINE 或其他正式訂房平台聯繫。',
-    en: 'Website reservation is in testing. Submitted records, shown prices, or system replies on this website are not valid reservations. Please book officially by phone, LINE, or an official booking platform.',
+  reservationNotice: {
+    zh: '送出預約資料後，僅代表申請已送出，尚未等同訂房成功或保留房間。民宿主人將再透過電話或 LINE 與您確認房況、金額與入住細節；待雙方確認並完成訂金匯款後，才視為正式訂房成功。',
+    en: 'Submitting reservation details means your request has been sent, but it is not yet a confirmed booking or room hold. The host will confirm availability, price, and stay details by phone or LINE; the booking is official only after both sides confirm and the deposit transfer is completed.',
   },
   contactAction: { zh: '聯繫民宿主人', en: 'Contact Host' },
 } as const;

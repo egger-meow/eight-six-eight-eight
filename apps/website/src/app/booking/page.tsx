@@ -319,7 +319,7 @@ function BookingForm() {
 
   return (
     <form className={styles.bookingForm} onSubmit={handleSubmit}>
-      <div className={styles.notice}>{t(bookingPage.testWarning)}</div>
+      <div className={styles.notice}>{t(bookingPage.reservationNotice)}</div>
 
       {!apiAvailable && (
         <div className={styles.notice}>
@@ -402,7 +402,7 @@ function BookingForm() {
               <span aria-hidden="true">×</span>
             </button>
             <h2>{t(modalMode === 'submit' ? bookingPage.confirmation.submitTitle : bookingPage.confirmation.lineTitle)}</h2>
-            <p className={styles.modalWarning}>{t(bookingPage.confirmation.testNote)}</p>
+            <p className={styles.modalWarning}>{t(bookingPage.confirmation.reservationNote)}</p>
             {modalMode === 'line' ? (
               <pre className={styles.messagePreview}>{currentLineMessage}</pre>
             ) : (

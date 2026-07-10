@@ -60,7 +60,7 @@ Current completed areas include:
 - Home, rooms list, room detail, about, booking, booking info, and location pages.
 - Responsive header, footer, mobile navigation, language context, and image-heavy visual design.
 - API-backed rooms, news, and media when available, with bundled content/images as emergency fallback.
-- Test-phase reservation flow with API availability checks, room disabling by selected date range, confirmation modals, LINE message confirmation, and explicit invalid-booking warning.
+- Public reservation request flow with API availability checks, room disabling by selected date range, price estimates, confirmation modals, LINE message confirmation, and explicit notice that a booking is official only after host confirmation and deposit transfer.
 
 ### `apps/admin`
 

@@ -52,7 +52,7 @@ export default function BookingInfo() {
         <div className="container">
           <div className={`reveal ${styles.editorialIntro}`}>
             <div>
-              <div className={styles.notice}>{t(bookingInfoPage.testNotice)}</div>
+              <div className={styles.notice}>{t(bookingInfoPage.reservationNotice)}</div>
             </div>
             {heroImage && (
               <figure className={styles.heroPhoto}>

@@ -48,7 +48,7 @@ NAS 192.168.1.128 — Docker
 **後台與 API：**
 `admin` 後台和 `api` 服務已經定義在 `infra/docker-compose.yml`，流量一樣由 Cloudflare Tunnel 進入 NPM，再由 NPM 根據網域（`admin.8688bnb.com`、`api.8688bnb.com`）轉發給對應容器。
 
-公開網站的訂房測試流程會呼叫 API 查詢房況與建立測試訂單，因此正式環境的 `WEBSITE_PUBLIC_API_URL` 必須是瀏覽器可連線的公開 API URL。
+公開網站的預約申請流程會呼叫 API 查詢房況與建立預約資料，因此正式環境的 `WEBSITE_PUBLIC_API_URL` 必須是瀏覽器可連線的公開 API URL。
 
 ---
 
