@@ -1,0 +1,116 @@
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import path from 'path';
+import { config } from './lib/config';
+import { redisClient, authLimiter, generalLimiter, publicLimiter } from './middleware/rate-limit';
+import { db } from '@8688bnb/db';
+import { errorHandler, notFoundHandler } from './middleware/error-handler';
+
+// Import routers
+import authRouter from './routes/auth.routes';
+import roomsRouter from './routes/rooms.routes';
+import bookingsRouter from './routes/bookings.routes';
+import blockedDatesRouter from './routes/blocked-dates.routes';
+import mediaRouter from './routes/media.routes';
+import pagesRouter from './routes/pages.routes';
+import newsRouter from './routes/news.routes';
+import dashboardRouter from './routes/dashboard.routes';
+import webhooksRouter from './routes/webhooks.routes';
+import systemRouter from './routes/system.routes';
+import holidayPeriodsRouter from './routes/holiday-periods.routes';
+import lineAdminRouter, { lineAdminWebhookRouter } from './routes/line-admin.routes';
+import { startNotificationWorker, stopNotificationWorker } from './lib/notifications';
+
+const app = express();
+
+if (config.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+// Security Middlewares
+app.use(helmet());
+app.use(cors({
+  origin: config.CORS_ORIGIN.split(','),
+  credentials: true
+}));
+
+app.use('/api/v1/line/admin/webhook', generalLimiter, lineAdminWebhookRouter);
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+app.use(
+  '/uploads',
+  (_req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+    next();
+  },
+  express.static(path.join(process.cwd(), 'uploads')),
+);
+
+// ── Health Check (No rate limiting needed)
+app.get('/api/v1/health', async (req, res) => {
+  let dbStatus = 'error';
+  try {
+    await db.$queryRaw`SELECT 1`;
+    dbStatus = 'ok';
+  } catch (e) {
+    dbStatus = 'error';
+  }
+
+  res.json({
+    status: dbStatus === 'ok' ? 'ok' : 'error',
+    version: '0.1.0',
+    uptime_seconds: Math.floor(process.uptime()),
+    checks: {
+      database: dbStatus,
+      redis: redisClient.isReady ? 'ok' : 'error'
+    }
+  });
+});
+
+// ── Rate Limiting Application
+// Apply stricter auth limits
+app.use('/api/v1/auth', authLimiter, authRouter);
+
+// Apply public limits
+app.use('/api/v1/rooms', publicLimiter, roomsRouter);
+app.use('/api/v1/pages', publicLimiter, pagesRouter);
+app.use('/api/v1/news', publicLimiter, newsRouter);
+app.use('/api/v1/media', publicLimiter, mediaRouter);
+
+// Apply general API limits
+app.use('/api/v1/bookings', generalLimiter, bookingsRouter);
+app.use('/api/v1/blocked-dates', generalLimiter, blockedDatesRouter);
+app.use('/api/v1/dashboard', generalLimiter, dashboardRouter);
+app.use('/api/v1/webhooks', generalLimiter, webhooksRouter);
+app.use('/api/v1/line', generalLimiter, lineAdminRouter);
+app.use('/api/v1/system', generalLimiter, systemRouter);
+app.use('/api/v1/holiday-periods', generalLimiter, holidayPeriodsRouter);
+
+// Error Handling
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+// Start server
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(config.API_PORT, HOST, () => {
+    console.log(`API Server listening on http://${HOST}:${config.API_PORT}`);
+    console.log(`   Environment: ${config.NODE_ENV}`);
+  });
+  void startNotificationWorker();
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  stopNotificationWorker();
+  await redisClient.quit();
+  process.exit(0);
+});
+
+export default app;

@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String
+  displayName  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Room {
+  id           Int      @id @default(autoincrement())
+  slug         String   @unique
+  nameZh       String
+  nameEn       String?
+  capacity     Int
+  type         String
+  description  String?
+  amenities    String[]
+  priceWeekday Int
+  priceWeekend Int
+  priceHoliday Int
+  available    Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  bookings     Booking[]
+  blockedDates BlockedDate[]
+}
+
+model Booking {
+  id             Int      @id @default(autoincrement())
+  roomId         Int
+  checkIn        DateTime @db.Date
+  checkOut       DateTime @db.Date
+  guestName      String
+  guestPhone     String
+  guestLineId     String?
+  guestCount     Int
+  totalPrice     Int?
+  status         String   @default("pending")
+  notes          String?
+  source         String   @default("website")
+  otaPlatform    String?
+  otaBookingId   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  room           Room     @relation(fields: [roomId], references: [id])
+  internalNotes  BookingNote[]
+  notificationEvents NotificationEvent[]
+}
+
+model BookingNote {
+  id        Int      @id @default(autoincrement())
+  bookingId Int
+  content   String
+  createdAt DateTime @default(now())
+
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+
+model BlockedDate {
+  id        Int      @id @default(autoincrement())
+  roomId    Int?
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  reason    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room      Room?    @relation(fields: [roomId], references: [id])
+}
+
+model HolidayPeriod {
+  id          Int      @id @default(autoincrement())
+  name        String
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  pricingType String   @default("weekend")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startDate, endDate])
+  @@index([pricingType])
+}
+
+model Media {
+  id               Int      @id @default(autoincrement())
+  target           String
+  filenameOriginal String
+  filenameStored   String
+  url              String
+  mimeType         String
+  sizeBytes        Int
+  altText          String?
+  sortOrder        Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([target])
+}
+
+model Page {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique
+  titleZh     String
+  titleEn     String?
+  contentHtml String?
+  meta        Json?
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model News {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  publishedAt DateTime?
+  visible     Boolean  @default(true)
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WebhookEvent {
+  id                Int      @id @default(autoincrement())
+  eventType         String
+  platform          String
+  externalBookingId String?
+  data              Json?
+  status            String   @default("received")
+  errorMessage      String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model NotificationEvent {
+  id            Int      @id @default(autoincrement())
+  eventType     String
+  aggregateType String
+  aggregateId   Int
+  dedupeKey     String   @unique
+  source        String
+  payload       Json
+  actorLineAdminId Int?
+  bookingId     Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  booking        Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  actorLineAdmin LineAdmin? @relation(fields: [actorLineAdminId], references: [id], onDelete: SetNull)
+  deliveries     NotificationDelivery[]
+
+  @@index([eventType])
+  @@index([aggregateType, aggregateId])
+  @@index([bookingId])
+}
+
+model NotificationDelivery {
+  id             Int       @id @default(autoincrement())
+  eventId        Int
+  channel        String
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime  @default(now())
+  sentAt         DateTime?
+  lastError      String?
+  providerMessageId String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  event          NotificationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, channel])
+  @@index([status, nextAttemptAt])
+}
+
+model LineAdmin {
+  id          Int       @id @default(autoincrement())
+  lineUserId  String    @unique
+  displayName String?
+  role        String
+  active      Boolean   @default(true)
+  boundAt     DateTime  @default(now())
+  lastSeenAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  notificationEvents NotificationEvent[]
+  auditLogs LineAuditLog[]
+}
+
+model LineBindingCode {
+  id          Int       @id @default(autoincrement())
+  codeHash    String    @unique
+  role        String
+  active      Boolean   @default(true)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  usedByLineUserId String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([role, active, expiresAt])
+}
+
+model LineWebhookRedelivery {
+  id             Int      @id @default(autoincrement())
+  webhookEventId String   @unique
+  sourceType     String?
+  sourceUserId   String?
+  eventType      String?
+  createdAt      DateTime @default(now())
+}
+
+model LineAuditLog {
+  id          Int      @id @default(autoincrement())
+  lineAdminId Int
+  action      String
+  entityType  String
+  entityId    Int?
+  detail      Json?
+  createdAt   DateTime @default(now())
+
+  lineAdmin   LineAdmin @relation(fields: [lineAdminId], references: [id], onDelete: Cascade)
+
+  @@index([lineAdminId, createdAt])
+  @@index([entityType, entityId])
+}
+

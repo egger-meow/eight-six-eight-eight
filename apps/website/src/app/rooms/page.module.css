@@ -1,0 +1,235 @@
+.subPage {
+  padding-top: 72px;
+  background-color: var(--color-bg);
+}
+
+.pageHeader {
+  padding: clamp(4rem, 8vw, 6rem) 0;
+  text-align: center;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-family: var(--font-zh);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  color: var(--color-ink);
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-family: var(--font-zh);
+  font-size: 1rem;
+  color: var(--color-ink-soft);
+  margin-top: 1rem;
+  letter-spacing: 0.1em;
+}
+
+.contentSection {
+  padding: var(--section-pad-v) 0;
+}
+
+.roomGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: clamp(2rem, 4vw, 3rem);
+}
+
+@media (max-width: 500px) {
+  .roomGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.roomCard {
+  background: var(--color-surface);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.roomCard:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+}
+
+.roomImgWrap {
+  position: relative;
+  aspect-ratio: 3/2;
+  overflow: hidden;
+}
+
+.imgOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(42,31,20,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.imgOverlay span {
+  color: white;
+  border: 1px solid white;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+}
+
+.roomCard:hover .imgOverlay {
+  opacity: 1;
+}
+
+.roomInfo {
+  padding: 1.5rem;
+}
+
+.roomHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 1.2rem;
+}
+
+.roomName {
+  font-family: var(--font-zh);
+  font-size: 1.35rem;
+  color: var(--color-ink);
+}
+
+.capacity {
+  font-family: var(--font-zh);
+  font-size: 0.85rem;
+  color: var(--color-gold);
+  background: var(--color-bg);
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.priceItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.priceLabel {
+  font-size: 0.75rem;
+  color: var(--color-ink-soft);
+}
+
+.priceValue {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  color: var(--color-ink);
+}
+
+.priceDivider {
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.detailLink, .bookLink {
+  flex: 1;
+  text-align: center;
+  padding: 0.7rem;
+  font-family: var(--font-zh);
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.detailLink {
+  border: 1px solid var(--color-border);
+  color: var(--color-ink-soft);
+}
+
+.detailLink:hover {
+  border-color: var(--color-ink);
+  color: var(--color-ink);
+}
+
+.bookLink {
+  background: var(--color-gold);
+  color: white;
+}
+
+.bookLink:hover {
+  background: var(--color-gold-dark);
+}
+
+
+/* ============================================================
+   VISUAL REFINEMENT PASS
+   ============================================================ */
+.subPage { background: linear-gradient(180deg, #fbf7ef, var(--color-bg)); }
+.pageHeader { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 0%, rgba(219,194,143,0.22), transparent 24rem), linear-gradient(180deg, var(--color-surface), var(--color-cream)); }
+.pageHeader::after { content: ""; position: absolute; left: 50%; bottom: 0; width: min(680px, 80vw); height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, rgba(184,150,95,0.58), transparent); }
+.roomGrid { align-items: start; }
+.roomCard { border: 1px solid rgba(184,150,95,0.18); border-radius: 8px; background: #fffdf8; box-shadow: 0 18px 46px rgba(64,42,21,0.09); }
+.roomCard:hover { transform: translateY(-4px); box-shadow: 0 26px 62px rgba(64,42,21,0.15); }
+.roomImgWrap { aspect-ratio: 16 / 10; }
+.imgOverlay { background: linear-gradient(180deg, rgba(42,31,20,0.04), rgba(42,31,20,0.56)); }
+.imgOverlay span { border-radius: 999px; background: rgba(255,253,248,0.12); backdrop-filter: blur(4px); }
+.roomInfo { padding: clamp(1.25rem, 3vw, 1.8rem); }
+.capacity { background: #f3e7d5; color: var(--color-gold-dark); }
+.detailLink, .bookLink { border-radius: 999px; }
+
+/* ============================================================
+   CINEMATIC ROOM CARD OVERLAYS
+   ============================================================ */
+.roomImgWrap img {
+  transition: transform 900ms cubic-bezier(.2,.8,.2,1) !important;
+}
+
+.roomCard:hover .roomImgWrap img {
+  transform: scale(1.08);
+}
+
+.imgOverlay {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.3rem;
+  background: linear-gradient(180deg, rgba(42,31,20,0.04), rgba(42,31,20,0.7));
+  transition: opacity 0.45s var(--ease-smooth);
+}
+
+.imgOverlay strong {
+  color: white;
+  font-family: var(--font-zh);
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-shadow: 0 8px 24px rgba(0, 0, 0, 0.34);
+}
+
+.imgOverlay span {
+  transform: translateY(10px);
+  transition: transform 0.45s var(--ease-smooth);
+}
+
+.roomCard:hover .imgOverlay span {
+  transform: translateY(0);
+}

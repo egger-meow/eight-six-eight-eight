@@ -1,0 +1,295 @@
+# =============================================================================
+# 86.88 B&B — Docker Compose Configuration
+# =============================================================================
+#
+# Traffic Flow:
+#   Internet → Cloudflare Edge → cloudflared tunnel
+#     → nginx-proxy-manager :80
+#       ├── 8688bnb.com         → website:3000
+#       ├── admin.8688bnb.com   → admin:3001    (Phase 2)
+#       └── api.8688bnb.com     → api:3333      (Phase 2)
+#
+# Services:
+#   1. website              — Next.js public site (port 3000 internal)
+#   2. postgres             — PostgreSQL database
+#   3. redis                — Redis cache
+#   4. nginx-proxy-manager  — Reverse proxy with GUI (ports 80/443/81)
+#   5. cloudflared          — Cloudflare Tunnel agent (outbound only)
+#
+# Usage (run from infra/ directory):
+#   First time:    docker compose up -d --build
+#   Update site:   docker compose build website && docker compose up -d website
+#   View logs:     docker compose logs -f
+#   Stop all:      docker compose down
+#
+# =============================================================================
+
+services:
+
+  # ── Next.js Website ────────────────────────────────────────────────────────
+  website:
+    build:
+      context: ..                          # monorepo root
+      dockerfile: apps/website/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${WEBSITE_PUBLIC_API_URL:-https://api.8688bnb.com/api/v1}
+    container_name: 8688bnb-website
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=${WEBSITE_PUBLIC_API_URL:-https://api.8688bnb.com/api/v1}
+    # Port 3000 is NOT exposed to the host — only accessible via Docker network
+    # NPM routes traffic to this container internally
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - 8688bnb_net
+
+  # ── PostgreSQL Database ────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: 8688bnb-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: 8688bnb
+      POSTGRES_USER: 8688bnb_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U 8688bnb_user -d 8688bnb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    networks:
+      - 8688bnb_net
+
+  # ── Redis Cache ────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: 8688bnb-redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    networks:
+      - 8688bnb_net
+
+  # ── Nginx Proxy Manager (Reverse Proxy GUI) ───────────────────────────────
+  # Admin GUI: http://192.168.1.128:81
+  # Default login: admin@example.com / changeme (CHANGE IMMEDIATELY)
+  #
+  # After first login, create Proxy Hosts:
+  #   Domain: 8688bnb.com      → Forward: website:3000
+  #   Domain: admin.8688bnb.com → Forward: admin:3001   (Phase 2)
+  #   Domain: api.8688bnb.com   → Forward: api:3333     (Phase 2)
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:2
+    container_name: 8688bnb-npm
+    restart: unless-stopped
+    ports:
+      # These ports are exposed to the host (LAN accessible)
+      - "8080:80"     # HTTP  — Cloudflare Tunnel connects via Docker network
+      - "4443:443"    # HTTPS — Changed from 443 to avoid Synology DSM conflict
+      - "81:81"       # Admin GUI — LAN only, do NOT expose via tunnel
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+    healthcheck:
+      test: ["CMD", "/usr/bin/check-health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    networks:
+      - 8688bnb_net
+
+  # ── Cloudflare Tunnel ──────────────────────────────────────────────────────
+  # Connects outbound to Cloudflare edge — no port forwarding needed.
+  # Configure in Cloudflare Zero Trust dashboard:
+  #   Public hostname: 8688bnb.com → http://8688bnb-npm:80
+  #
+  # The tunnel routes external traffic through Cloudflare to NPM,
+  # which then forwards to the appropriate app container.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: 8688bnb-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --protocol http2 run --token ${TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    dns:
+      - "1.1.1.1"
+      - "8.8.8.8"
+    depends_on:
+      nginx-proxy-manager:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    networks:
+      - 8688bnb_net
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Phase 2 Services — Uncomment when ready to deploy
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── Next.js Admin Dashboard ──────────────────────────────────────────────
+  admin:
+    build:
+      context: ..
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${ADMIN_PUBLIC_API_URL:-https://api.8688bnb.com/api/v1}
+        NEXT_DEPLOYMENT_ID: ${ADMIN_DEPLOYMENT_ID:-admin-20260614-api-url}
+    container_name: 8688bnb-admin
+    restart: unless-stopped
+    expose: ["3001"]
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${ADMIN_PUBLIC_API_URL:-https://api.8688bnb.com/api/v1}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [8688bnb_net]
+
+  # ── Express API ───────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: 8688bnb-api
+    restart: unless-stopped
+    expose: ["3333"]
+    environment:
+      NODE_ENV: production
+      API_PORT: "3333"
+      DATABASE_URL: postgresql://8688bnb_user:${POSTGRES_PASSWORD}@postgres:5432/8688bnb
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      CSRF_SECRET: ${CSRF_SECRET}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-8688bnb123}
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://8688bnb.com,https://admin.8688bnb.com}
+      WEBHOOK_API_KEY: ${WEBHOOK_API_KEY:-}
+      PUBLIC_ADMIN_URL: ${PUBLIC_ADMIN_URL:-https://admin.8688bnb.com}
+      LINE_CHANNEL_SECRET: ${LINE_CHANNEL_SECRET:-}
+      LINE_CHANNEL_ACCESS_TOKEN: ${LINE_CHANNEL_ACCESS_TOKEN:-}
+      LINE_ADMIN_OWNER_USER_IDS: ${LINE_ADMIN_OWNER_USER_IDS:-}
+      LINE_ADMIN_DEVELOPER_USER_IDS: ${LINE_ADMIN_DEVELOPER_USER_IDS:-}
+      LINE_BINDING_CODE_TTL_MINUTES: ${LINE_BINDING_CODE_TTL_MINUTES:-30}
+      NOTIFICATION_WORKER_ENABLED: ${NOTIFICATION_WORKER_ENABLED:-true}
+      NOTIFICATION_WORKER_INTERVAL_MS: ${NOTIFICATION_WORKER_INTERVAL_MS:-15000}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-86.88 B&B <no-reply@8688bnb.com>}
+      BOOKING_NOTIFICATION_EMAILS: ${BOOKING_NOTIFICATION_EMAILS:-}
+    volumes:
+      - api_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3333/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks: [8688bnb_net]
+
+  seed:
+    image: node:20
+    container_name: 8688bnb-seed
+    working_dir: /db
+    volumes:
+      - ../packages/db:/db
+      - ../apps/website/src/data:/seed-data
+    environment:
+      DATABASE_URL: postgresql://8688bnb_user:${POSTGRES_PASSWORD}@postgres:5432/8688bnb
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-8688bnb}
+      SEED_DATA_DIR: /seed-data    
+    command: >
+      sh -c "npm install &&
+             npx prisma@5 generate &&
+             npx prisma@5 db push --accept-data-loss &&
+             npx tsx src/seed.ts"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["seed"]
+    networks:
+      - 8688bnb_net
+
+# ── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  8688bnb_net:
+    name: 8688bnb_net
+    driver: bridge
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+# Named volumes persist data across container recreations
+volumes:
+  npm_data:
+    name: 8688bnb_npm_data
+    external: true
+  npm_letsencrypt:
+    name: 8688bnb_npm_letsencrypt
+    external: true
+  postgres_data:
+    name: 8688bnb_postgres_data
+  redis_data:
+    name: 8688bnb_redis_data
+  api_uploads:
+    name: 8688bnb_api_uploads

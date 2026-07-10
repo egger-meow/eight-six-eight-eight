@@ -1,0 +1,28 @@
+{
+  "name": "@8688bnb/db",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "lint": "eslint .",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "tsx src/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0",
+    "bcryptjs": "^3.0.3",
+    "prisma": "5.22.0",
+    "@prisma/fetch-engine": "5.22.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.15.1",
+    "typescript": "^5",
+    "@types/node": "^20.14.2"
+  }
+}

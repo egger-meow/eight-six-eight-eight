@@ -1,0 +1,288 @@
+.pageContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.viewToggle {
+  display: flex;
+  background: var(--border-color);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.toggleBtn {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toggleBtn.active {
+  background: var(--content-bg);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.toggleBtn:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(17, 24, 39, 0.55);
+}
+
+.modalCard {
+  position: relative;
+  width: min(900px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  background: var(--content-bg);
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+}
+
+.closeButton {
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--content-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: #f3f4f6;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modalHeader h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.35rem;
+}
+
+.modalEyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.pastNotice {
+  display: inline-flex;
+  margin-top: 0.6rem;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(107, 114, 128, 0.14);
+  color: var(--status-gray);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(107, 114, 128, 0.12);
+  color: var(--status-gray);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-pending { background: rgba(245, 158, 11, 0.14); color: var(--status-amber); }
+.status-confirmed { background: rgba(16, 185, 129, 0.14); color: var(--status-green); }
+.status-checked_in { background: rgba(59, 130, 246, 0.14); color: var(--status-blue); }
+.status-checked_out { background: rgba(107, 114, 128, 0.14); color: var(--status-gray); }
+.status-cancelled,
+.status-no_show { background: rgba(239, 68, 68, 0.14); color: var(--status-red); }
+
+.reviewLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.actionPanel {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(184, 156, 110, 0.28);
+  border-radius: 8px;
+  background: rgba(184, 156, 110, 0.08);
+}
+
+.actionPanel h3,
+.noteBlock h3 {
+  margin: 0 0 0.35rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.actionPanel p,
+.noteBlock p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.actionButtons,
+.footerGroup,
+.noteActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.detailGrid,
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.infoItem {
+  min-height: 78px;
+  padding: 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.015);
+}
+
+.infoItem span {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.infoItem strong {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.noteBlock {
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.noteHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-secondary);
+}
+
+.noteActions {
+  margin-top: 0.75rem;
+}
+
+.noteList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.noteItem {
+  padding: 0.8rem;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.noteItem small,
+.emptyNote {
+  color: var(--text-secondary);
+}
+
+.footerActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.dangerButton {
+  border: 1px solid var(--status-red);
+  border-radius: 6px;
+  padding: 0.65rem 1rem;
+  background: transparent;
+  color: var(--status-red);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dangerButton:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+@media (max-width: 720px) {
+  .header,
+  .modalHeader,
+  .actionPanel,
+  .footerActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .viewToggle,
+  .actionButtons,
+  .footerGroup {
+    width: 100%;
+  }
+
+  .toggleBtn,
+  .actionButtons button,
+  .footerGroup button {
+    flex: 1;
+    justify-content: center;
+  }
+}

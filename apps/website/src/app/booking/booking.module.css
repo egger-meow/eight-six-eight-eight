@@ -1,0 +1,495 @@
+.subPage {
+  padding-top: 72px;
+  background-color: var(--color-bg);
+}
+
+.pageHeader {
+  padding: clamp(4rem, 8vw, 6rem) 0;
+  text-align: center;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-family: var(--font-zh);
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  color: var(--color-ink);
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-family: var(--font-zh);
+  font-size: 1rem;
+  color: var(--color-ink-soft);
+  margin-top: 1rem;
+}
+
+.section {
+  padding: var(--section-pad-v) 0;
+  background-color: var(--color-bg);
+}
+
+.bookingForm {
+  background: var(--color-surface);
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+  color: var(--color-ink);
+}
+
+.notice,
+.error,
+.success {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  line-height: 1.7;
+}
+
+.notice {
+  background: #fff8e6;
+  border: 1px solid #d8bd78;
+  color: #665018;
+}
+
+.error {
+  background: #fff0f0;
+  border: 1px solid #d79595;
+  color: #7b2323;
+  margin-top: 1.5rem;
+}
+
+.success {
+  background: #edf8f1;
+  border: 1px solid #8fbf9f;
+  color: #245a36;
+  margin-top: 1.5rem;
+}
+
+.formGroup {
+  margin-bottom: 2rem;
+}
+
+.formLabel {
+  display: block;
+  font-family: var(--font-zh);
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--color-ink);
+}
+
+.inputGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.inputGrid label,
+.formGroup label {
+  display: grid;
+  gap: 0.5rem;
+  color: var(--color-ink-soft);
+}
+
+.formControl {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #cfc4b8;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: inherit;
+  background-color: #fff;
+  color: var(--color-ink);
+}
+
+.formControl:focus {
+  outline: none;
+  border-color: var(--color-gold-dark);
+  box-shadow: 0 0 0 3px rgba(184, 156, 110, 0.22);
+}
+
+.roomSelectGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+}
+
+.roomCard {
+  position: relative;
+  min-height: 96px;
+  border: 1.5px solid #cfc4b8;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  text-align: left;
+  background: #fff;
+  font: inherit;
+  color: var(--color-ink);
+  overflow: visible;
+}
+
+.roomCard:hover,
+.roomCard:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--color-gold-dark);
+  box-shadow: var(--shadow-md);
+}
+
+.roomCard:disabled {
+  cursor: not-allowed;
+}
+
+.unavailableRoom {
+  background: #f2f2f2;
+  border-color: #d6d6d6;
+  color: #8b8b8b;
+  box-shadow: none;
+  opacity: 0.72;
+}
+
+.unavailableRoom:hover,
+.unavailableRoom:focus-visible {
+  transform: none;
+  border-color: #d6d6d6;
+  box-shadow: none;
+}
+
+.unavailableRoom .roomName,
+.unavailableRoom .roomCapacity {
+  color: #777;
+}
+
+.availabilityHint {
+  margin: -0.25rem 0 1rem;
+  color: var(--color-ink-soft);
+  font-size: 0.95rem;
+}
+
+.roomCard.selected {
+  border-color: var(--color-gold-dark);
+  background-color: var(--color-cream);
+  box-shadow: inset 0 0 0 1px var(--color-gold-dark);
+}
+
+.roomPreview {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: calc(100% + 0.75rem);
+  height: 132px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 5;
+}
+
+.roomCard:hover .roomPreview,
+.roomCard:focus-visible .roomPreview {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.roomName,
+.roomCapacity {
+  display: block;
+}
+
+.roomName {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--color-ink);
+}
+
+.roomCapacity {
+  font-size: 0.9rem;
+  color: var(--color-ink-soft);
+}
+
+.summary {
+  background-color: #3e3a39;
+  color: #fff;
+  padding: clamp(1.5rem, 4vw, 2rem);
+  border-radius: 8px;
+  margin-top: 3rem;
+}
+
+.summaryTitle {
+  font-size: 1.4rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  padding-bottom: 0.5rem;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 1.05rem;
+}
+
+.totalPrice {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 700;
+  color: var(--color-gold-light);
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.24);
+  text-align: right;
+}
+
+.totalPrice p {
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.78);
+  margin-top: 0.5rem;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.submitBtn,
+.lineBtn {
+  width: 100%;
+  justify-content: center;
+  font-size: 1.05rem;
+  padding: 1rem;
+}
+
+.submitBtn {
+  background-color: var(--color-ink);
+  border-color: var(--color-ink);
+  color: #fff;
+}
+
+.submitBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.lineBtn {
+  background-color: #00b900;
+  border-color: #00b900;
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .inputGrid,
+  .actions {
+    grid-template-columns: 1fr;
+  }
+
+  .roomPreview {
+    display: none;
+  }
+
+  .summaryRow {
+    font-size: 1rem;
+  }
+
+  .totalPrice {
+    text-align: left;
+  }
+}
+
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(30, 24, 18, 0.62);
+}
+
+.modalCard {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-radius: 8px;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+.closeButton {
+  position: sticky;
+  top: 0;
+  float: right;
+  z-index: 2;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: var(--color-cream);
+}
+
+.modalCard h2 {
+  font-family: var(--font-zh);
+  font-size: 1.45rem;
+  margin-bottom: 0.75rem;
+}
+
+.modalWarning {
+  padding: 0.85rem 1rem;
+  border: 1px solid #d8bd78;
+  border-radius: 6px;
+  background: #fff8e6;
+  color: #665018;
+  line-height: 1.7;
+  margin-bottom: 1rem;
+}
+
+.modalSummary {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.modalSummary div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.35fr) 1fr;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modalSummary span {
+  color: var(--color-ink-soft);
+}
+
+.modalSummary strong {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.messagePreview {
+  max-height: 46vh;
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-ink);
+  white-space: pre-wrap;
+  font-family: inherit;
+  line-height: 1.7;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.modalActions button {
+  min-width: 150px;
+  justify-content: center;
+}
+
+
+/* ============================================================
+   VISUAL REFINEMENT PASS
+   ============================================================ */
+.subPage { background: linear-gradient(180deg, #fbf7ef, var(--color-bg)); }
+.pageHeader { position: relative; overflow: hidden; background: radial-gradient(circle at 50% 0%, rgba(219,194,143,0.22), transparent 24rem), linear-gradient(180deg, var(--color-surface), var(--color-cream)); }
+.pageHeader::after { content: ""; position: absolute; left: 50%; bottom: 0; width: min(680px, 80vw); height: 1px; transform: translateX(-50%); background: linear-gradient(90deg, transparent, rgba(184,150,95,0.58), transparent); }
+.section { background: transparent; }
+.bookingForm { border-color: rgba(184,150,95,0.24); background: rgba(255,253,248,0.88); box-shadow: 0 22px 58px rgba(64,42,21,0.11); }
+.notice { border-color: rgba(184,150,95,0.52); background: linear-gradient(180deg, #fff9ea, #fff4d8); }
+.formControl { border-color: rgba(132,99,58,0.28); border-radius: 8px; background: #fffdf8; }
+.roomCard { border-color: rgba(132,99,58,0.24); background: #fffdf8; }
+.roomCard.selected { background: #f4eadc; }
+.summary { background: radial-gradient(circle at 100% 0%, rgba(219,194,143,0.18), transparent 16rem), #34291f; box-shadow: 0 20px 48px rgba(42,29,18,0.18); }
+.submitBtn, .lineBtn { border-radius: 999px; }
+.modalOverlay { backdrop-filter: blur(5px); }
+.modalCard { background: radial-gradient(circle at top left, rgba(219,194,143,0.14), transparent 18rem), var(--color-surface); }
+
+/* ============================================================
+   GLASS RESERVATION PANEL
+   ============================================================ */
+.bookingForm {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 253, 248, 0.74);
+  box-shadow: 0 28px 78px rgba(64, 42, 21, 0.14);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.bookingForm::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(219, 194, 143, 0.2), transparent 19rem),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.46), transparent 42%);
+}
+
+.bookingForm > * {
+  position: relative;
+  z-index: 1;
+}
+
+.formControl {
+  transition: border-color 0.24s var(--ease-smooth), box-shadow 0.24s var(--ease-smooth), background 0.24s var(--ease-smooth);
+}
+
+.formControl:hover {
+  border-color: rgba(132,99,58,0.42);
+}
+
+.roomCard::after {
+  content: "";
+  position: absolute;
+  inset: 0.55rem;
+  border: 1px solid rgba(184, 150, 95, 0);
+  border-radius: 6px;
+  pointer-events: none;
+  transition: border-color 0.25s var(--ease-smooth);
+}
+
+.roomCard.selected::after {
+  border-color: rgba(132, 99, 58, 0.3);
+}
+
+.roomPreview img {
+  transition: transform 900ms cubic-bezier(.2,.8,.2,1) !important;
+}
+
+.roomCard:hover .roomPreview img,
+.roomCard:focus-visible .roomPreview img {
+  transform: scale(1.06);
+}
+
+.summary {
+  background: radial-gradient(circle at 100% 0%, rgba(219,194,143,0.18), transparent 16rem), linear-gradient(135deg, #3b2c20, #2c241d);
+  border: 1px solid rgba(219,194,143,0.18);
+}

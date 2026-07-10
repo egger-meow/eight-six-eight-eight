@@ -1,0 +1,80 @@
+import { z } from 'zod';
+export declare const RoomCreateSchema: z.ZodObject<{
+    slug: z.ZodString;
+    name_zh: z.ZodString;
+    name_en: z.ZodOptional<z.ZodString>;
+    capacity: z.ZodNumber;
+    type: z.ZodEnum<["double", "quad", "suite"]>;
+    description: z.ZodOptional<z.ZodString>;
+    amenities: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    price_weekday: z.ZodNumber;
+    price_weekend: z.ZodNumber;
+    price_holiday: z.ZodNumber;
+    available: z.ZodDefault<z.ZodBoolean>;
+    sort_order: z.ZodDefault<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    type: "double" | "quad" | "suite";
+    slug: string;
+    name_zh: string;
+    capacity: number;
+    price_weekday: number;
+    price_weekend: number;
+    price_holiday: number;
+    available: boolean;
+    sort_order: number;
+    name_en?: string | undefined;
+    description?: string | undefined;
+    amenities?: string[] | undefined;
+}, {
+    type: "double" | "quad" | "suite";
+    slug: string;
+    name_zh: string;
+    capacity: number;
+    price_weekday: number;
+    price_weekend: number;
+    price_holiday: number;
+    name_en?: string | undefined;
+    description?: string | undefined;
+    amenities?: string[] | undefined;
+    available?: boolean | undefined;
+    sort_order?: number | undefined;
+}>;
+export declare const RoomUpdateSchema: z.ZodObject<Omit<{
+    slug: z.ZodOptional<z.ZodString>;
+    name_zh: z.ZodOptional<z.ZodString>;
+    name_en: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    capacity: z.ZodOptional<z.ZodNumber>;
+    type: z.ZodOptional<z.ZodEnum<["double", "quad", "suite"]>>;
+    description: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    amenities: z.ZodOptional<z.ZodOptional<z.ZodArray<z.ZodString, "many">>>;
+    price_weekday: z.ZodOptional<z.ZodNumber>;
+    price_weekend: z.ZodOptional<z.ZodNumber>;
+    price_holiday: z.ZodOptional<z.ZodNumber>;
+    available: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    sort_order: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+}, "slug">, "strip", z.ZodTypeAny, {
+    type?: "double" | "quad" | "suite" | undefined;
+    name_zh?: string | undefined;
+    name_en?: string | undefined;
+    capacity?: number | undefined;
+    description?: string | undefined;
+    amenities?: string[] | undefined;
+    price_weekday?: number | undefined;
+    price_weekend?: number | undefined;
+    price_holiday?: number | undefined;
+    available?: boolean | undefined;
+    sort_order?: number | undefined;
+}, {
+    type?: "double" | "quad" | "suite" | undefined;
+    name_zh?: string | undefined;
+    name_en?: string | undefined;
+    capacity?: number | undefined;
+    description?: string | undefined;
+    amenities?: string[] | undefined;
+    price_weekday?: number | undefined;
+    price_weekend?: number | undefined;
+    price_holiday?: number | undefined;
+    available?: boolean | undefined;
+    sort_order?: number | undefined;
+}>;
+//# sourceMappingURL=rooms.schema.d.ts.map

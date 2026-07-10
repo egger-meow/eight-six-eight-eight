@@ -1,25 +1,33 @@
-# Dependencies
+# =============================================================================
+# .dockerignore — Files excluded from Docker build context
+# =============================================================================
+# The build context is the monorepo root (set via context: .. in compose).
+# Excluding unnecessary files keeps the context small and builds fast.
+
+# Dependencies (rebuilt inside container)
 node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # Next.js build output (rebuilt inside container)
-.next
-out
+**/.next
+**/out
+
+# Turbo cache (not needed in build)
+.turbo
+**/.turbo
+
+# Infrastructure (avoid recursive context — compose lives here)
+infra/
 
 # Version control
 .git
 .gitignore
 
-# Docker (avoid recursive context)
-docker-compose.yml
-Dockerfile
-.dockerignore
-
 # Documentation & non-build files
 *.md
-LICENSE
+!README.md
 
 # IDE & editor files
 .vscode

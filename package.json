@@ -1,24 +1,22 @@
 {
-  "name": "temp-app",
-  "version": "0.1.0",
+  "name": "@8688bnb/monorepo",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "next": "16.2.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
-    "typescript": "^5"
+    "@types/bcryptjs": "^2.4.6",
+    "turbo": "^2.1.2"
+  },
+  "packageManager": "npm@10.9.3",
+  "dependencies": {
+    "@openai/codex": "^0.141.0",
+    "bcryptjs": "^3.0.3"
   }
 }

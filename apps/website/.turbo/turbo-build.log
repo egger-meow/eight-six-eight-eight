@@ -1,0 +1,28 @@
+
+
+> @8688bnb/website@0.1.0 build
+> next build
+
+▲ Next.js 16.2.6 (Turbopack)
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 2.5min
+  Finished TypeScript in 36.9s    ✓ Finished TypeScript in 36.9s 
+  Collecting page data using 1 worker in 10.3s    ✓ Collecting page data using 1 worker in 10.3s 
+✓ Generating static pages using 1 worker (9/9) in 3.9s
+  Finalizing page optimization in 3.9s    ✓ Finalizing page optimization in 3.9s 
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /about
+├ ○ /booking
+├ ○ /booking-info
+├ ○ /location
+├ ○ /rooms
+└ ƒ /rooms/[slug]
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

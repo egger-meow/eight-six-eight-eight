@@ -1,0 +1,12 @@
+{
+  "name": "@8688bnb/config-eslint",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./index.mjs",
+  "files": [
+    "index.mjs"
+  ],
+  "devDependencies": {
+    "eslint": "^9"
+  }
+}
